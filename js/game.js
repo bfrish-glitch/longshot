@@ -150,7 +150,7 @@ function finish(){
     $('#rStars').innerHTML=''; $('#rCh').innerHTML='';
     $('#rT').textContent=String(stats.kills); $('#rH').textContent=stats.heads; $('#rA').textContent=Math.round(acc*100)+'%'; $('#rC').textContent='$'+cash.toLocaleString();
     {const rk=lbRank('endless'); if(rk) $('#rReason').textContent+=' '+rk;}
-    $('#rNext').hidden=true; $('#rRetry').textContent='New run'; show('result'); return; }
+    try{ achFinish(false,0); }catch(e){} $('#rNext').hidden=true; $('#rRetry').textContent='New run'; show('result'); return; }
   $('#rRetry').textContent='Retry';
   if(M.vet||M.daily){
     if(ok){ stars=total>=par*1.45?3:total>=par?2:1; cash=Math.round(total*.6*(M.vet?2:1.5));
@@ -164,7 +164,7 @@ function finish(){
     $('#rStars').innerHTML=ok?`<span class="medal m${stars}">${M.vet?'VETERAN ':''}${['','BRONZE','SILVER','GOLD'][stars]}</span>`:'';
     $('#rT').textContent=`${stats.kills}/${totalHos}`; $('#rH').textContent=stats.heads; $('#rA').textContent=Math.round(acc*100)+'%'; $('#rC').textContent='$'+cash.toLocaleString();
     if(M.daily&&ok){const rk=lbRank('daily'); if(rk) $('#rReason').textContent+=' · '+rk;}
-    $('#rCh').innerHTML=''; $('#rNext').hidden=true; show('result'); return; }
+    $('#rCh').innerHTML=''; try{ achFinish(ok,stars); }catch(e){} $('#rNext').hidden=true; show('result'); return; }
   if(ok){stars=total>=par*1.45?3:total>=par?2:1; cash=Math.round(total*.6); save.best=save.best||{}; save.best[mi]=Math.max(save.best[mi]||0,total); save.cash+=cash; save.stars[mi]=Math.max(save.stars[mi]||0,stars); if(save.unlocked<mi+2) save.unlocked=Math.min(MISSIONS.length,mi+2); persist();}
   $('#rNo').textContent='CONTRACT '+String(mi+1).padStart(2,'0');
   const hd=$('#rHead'); hd.textContent=ok?'Contract complete':'Contract failed'; hd.className=ok?'ok':'bad';
@@ -175,6 +175,7 @@ function finish(){
   const done=new Set(save.ch[mi]||[]); let bonus=0;
   $('#rCh').innerHTML=(M.ch||[]).map(id=>{const got=ok&&CH[id].ok(); if(got){ if(!done.has(id)) bonus+=150; done.add(id);} return `<div class="${got?'on':''}"><span>${got?'✓':'○'}</span>${CH[id].t(M)}${got?'':''}</div>`;}).join('');
   if(ok){save.ch[mi]=[...done]; save.cash+=bonus; persist(); if(bonus) $('#rC').textContent='$'+(cash+bonus).toLocaleString();}
+  try{ achFinish(ok,stars); }catch(e){}
   $('#rNext').hidden=!(ok&&mi+1<MISSIONS.length);
   show('result');
 }
@@ -318,7 +319,7 @@ function impact(b,hit){
   if(M&&M.range){ if(!rangeImpact(b,hit)){ puff(hit.point,hit.water?1.4:1,false); snd.impact(EYE.distanceTo(hit.point),false); } else puff(hit.point,.35,false); return; }
   const u=hit.object?hit.object.userData:null, dist=EYE.distanceTo(hit.point);
   if(u&&u.hz){ puff(hit.point,.7,false); triggerHazard(u.hz,dist); }
-  else if(u&&u.p&&alive(u.p)){ kill(u.p,u.part,hit.point,dist,b.vel); }
+  else if(u&&u.p&&alive(u.p)){ achLastB=b; kill(u.p,u.part,hit.point,dist,b.vel); }
   else { puff(hit.point,hit.water?1.4:1,hit.water?'water':false); snd.impact(dist,false); disturb(hit.point,'miss'); }
   if(b.kc){ if(kc&&!alive(kc.p)){kc.phase=1; kc.t=0;} else endKC(); }
 }
@@ -338,6 +339,7 @@ function kill(p,part,pt,dist,vel,accident){
     const tag=accident?'ACCIDENT ':(p.hvt?'HVT ':'')+(part==='head'?'HEADSHOT ':'');
     pops.push({w:sp,t:0,txt:`${tag}+${pts}`+(stats.combo>1?` · COMBO ×${stats.combo}`:'')+(accident?'':` · ${Math.round(dist)} m`),c:accident?'#3fb8ff':part==='head'?'#ffb22e':'#ebe6d8'});
     if(!accident) disturb(pt,'kill');
+    try{ achKill(p,part,dist,accident); }catch(e){}
     if(M.endless){ const add=part==='head'&&!accident?9:6; timeLeft+=add; pops.push({w:V3().set(p.x,p.y+2.9,p.z),t:0,txt:`+${add}s`,c:'#38e1ff'}); if(hostilesLeft()===0&&!endInfo){ RUN.wave++; RUN.spawnT=1.6; } }
     else if(hostilesLeft()===0) win();
   } else {

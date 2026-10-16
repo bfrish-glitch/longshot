@@ -192,7 +192,7 @@ $('#bBack').addEventListener('click',toMenu);
 $('#rRetry').addEventListener('click',()=>openBrief(mi,RUN.kind));
 $('#rNext').addEventListener('click',()=>openBrief(mi+1));
 $('#rMenu').addEventListener('click',toMenu);
-function toMenu(){rainSound(false); state='menu'; scoped=false; stats=null; bulletObj.visible=false; menuCity(); show('menu');}
+function toMenu(){ try{ achRender(); }catch(e){} rainSound(false); state='menu'; scoped=false; stats=null; bulletObj.visible=false; menuCity(); show('menu');}
 const oS=$('#optSnd'),oI=$('#optInv'),oH=$('#optHold'),oQ=$('#optHq');
 oS.checked=save.opts.snd; oI.checked=save.opts.inv; oH.checked=save.opts.hold; oQ.checked=save.opts.hq;
 oS.addEventListener('change',()=>{save.opts.snd=oS.checked; persist(); if(oS.checked) unlockAudio(); else if(silentEl) silentEl.pause();});
@@ -302,7 +302,7 @@ $('#bLoadSave').addEventListener('click',()=>{ const m=$('#saveMsg'), v=$('#inSa
 try{ window.claude?.hot?.snapshot?.(()=>({mi,kind:RUN.kind,inMission:state==='play'||state==='paused'||state==='killcam'})); }catch(e){}
 const boot=(hd)=>{ try{ menuCity(); state='menu'; show('menu'); syncLabel();
     if(hd&&hd.inMission&&typeof hd.mi==='number'&&hd.mi<save.unlocked){ openBrief(hd.mi,['v','d','e','r'].includes(hd.kind)?hd.kind:'c'); hintMsg=''; const b=$('#bIntel'); if(b) b.insertAdjacentHTML('afterbegin','<b style="color:var(--green)">The game just updated. Tap Take position to resume this contract.</b><br>'); }
-  }catch(err){ $('#loading').textContent='Something broke loading the city: '+err.message; return; } $('#loading').hidden=true; cloudInit(); lbInit(); };
+  }catch(err){ $('#loading').textContent='Something broke loading the city: '+err.message; return; } $('#loading').hidden=true; cloudInit(); lbInit(); try{ window.__achReady=true; achSave(); achRender(); achCollect(); }catch(e){ console.warn(e); } };
 const bootWith=d=>loadChars().catch(e=>{ console.warn('characters unavailable, using basic people',e); }).finally(()=>setTimeout(()=>boot(d||{}),30));
 if(window.claude?.hot?.ready) window.claude.hot.ready(bootWith); else bootWith(window.claude?.hot?.data??{});
 requestAnimationFrame(frame);

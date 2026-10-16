@@ -89,7 +89,7 @@ function rangeHit(p,b,pt){
   const R=RG, dist=EYE.distanceTo(pt); p.swing=1; snd.ok()&&(tone(Math.min(3,dist/343),2100,1900,.5,.22),tone(Math.min(3,dist/343)+.02,3150,3000,.35,.12));
   pops.push({w:pt.clone().add(V3().set(0,1.2,0)),t:0,txt:`HIT · ${Math.round(dist)} m`,c:'#86d39a'});
   const good=R.drill==='free'||p===R.active; if(!good){ R.last=`Wrong plate (${p.d} m)`; return; }
-  R.hits++; stats.hits++; stats.kills++; stats.longest=Math.max(stats.longest,dist);
+  R.hits++; try{ achRangeHit(p.d); }catch(e){} stats.hits++; stats.kills++; stats.longest=Math.max(stats.longest,dist);
   if(R.drill==='cold'){ R.coldHit=p.d; rangeEnd(true); return; }
   if(R.drill==='ladder'||R.drill==='speed'||R.drill==='wind'){ R.queue.shift(); if(!R.queue.length){ rangeEnd(true); return; } rangeActivate(); }
 }
@@ -123,7 +123,7 @@ function rangeFinish(){
   $('#rNo').textContent='TARGET RANGE · '+DRILLS[dr].n.toUpperCase(); const hd=$('#rHead'); hd.textContent=isBest?'New best':'Drill complete'; hd.className=isBest||R.hits?'ok':'bad';
   $('#rReason').textContent=line+(best?' '+best+'.':''); $('#rStars').innerHTML=''; $('#rCh').innerHTML='';
   $('#rT').textContent=String(R.hits); $('#rH').textContent=String(R.shots); $('#rA').textContent=acc+'%'; $('#rC').textContent='$'+cash;
-  $('#rNext').hidden=true; $('#rRetry').textContent='Again'; show('result');
+  try{ achRange(dr,R); }catch(e){} $('#rNext').hidden=true; $('#rRetry').textContent='Again'; show('result');
 }
 function rangeBriefHtml(){ const B=save.range||{}, cur=RUN.drill||'free';
   const bestOf={cold:B.cold?B.cold+' m':'',ladder:B.ladder?B.ladder+'s':'',wind:B.wind!=null?B.wind+' hits':'',mover:B.mover!=null?B.mover+' hits':'',speed:B.speed?B.speed+'s':''};
