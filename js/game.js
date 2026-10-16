@@ -133,7 +133,7 @@ function start(){
   bullets=[]; pops=[]; endT=-1; endInfo=null; kc=null; kick=0; flash=0; T=0; lastRange=0;
   stats={shots:0,hits:0,heads:0,kills:0,score:0,alerted:false,longest:0,moving:false,accidents:0,combo:1,lastKill:-99};
   playerHp=M.hp||2; hurt=0; hintMsg=''; hintT=0;
-  show('hud'); hudSetup(); rainSound(rainOn);
+  show('hud'); hudSetup(); rainSound(rainOn); try{ gearStart(); }catch(e){ console.warn(e); }
 }
 function fail(reason){if(endInfo) return; endInfo={ok:false,reason}; endT=1.5; holding=false;}
 function win(){if(endInfo) return; endInfo={ok:true}; endT=1.3;}
@@ -222,7 +222,7 @@ function openBrief(i,kind){
   {const [rg,why]=REC[i]||['bolt',''], own=save.guns.owned.includes(rg), on=save.guns.eq===rg, cost=GUNS[rg].cost, go=`onclick="window.__eqRec('${rg}',${i},'${RUN.kind}')"`;
    const act=on?`<span class="ok">&#10003; Recommended</span>`:own?`<button class="rbtn" ${go}>EQUIP</button>`:save.cash>=cost?`<button class="rbtn" ${go}>BUY &amp; EQUIP · $${cost.toLocaleString()}</button>`:`<span class="cost">$${cost.toLocaleString()} · you have $${Math.floor(save.cash).toLocaleString()}</span>`;
    rifle=`<div class="rifle${act.startsWith('<button')?' wide':''}"><div class="rl"><small>RIFLE</small><b>${gun().name}${supOn()?' + suppressor':''}</b>${on?'':`<span class="rec">Recommended: <b>${GUNS[rg].name}</b></span>`}</div><div class="ra">${act}</div><p>${why}</p></div>`;}
-  let txt=(top?`<p class="mode">${top.trim()}</p>`:'')+`<div class="tgt"><small>TARGETS</small>${tg.map(t=>`<p>${t}</p>`).join('')}${photos}</div>`+rifle;
+  let txt=(top?`<p class="mode">${top.trim()}</p>`:'')+`<div class="tgt"><small>TARGETS</small>${tg.map(t=>`<p>${t}</p>`).join('')}${photos}</div>`+rifle+gearHtml(i);
   if(notes.length){ const first=!(save.stars&&save.stars[i]>0)&&!m.daily&&!m.endless&&!m.vet; txt+=`<details class="notes"${first?' open':''}><summary>FIELD NOTES</summary>${notes.map(t=>`<p>${t}</p>`).join('')}</details>`; }
   if(escort) $('#bRange').textContent=`${Math.round(-escort.line.c/10)*10} m`;
   $('#bHosL').textContent=m.range?'PLATES':'HOSTILES';
@@ -264,7 +264,7 @@ function predictKill(dir){
   }
   return null;
 }
-function doReload(){if(state!=='play'||reloadT>0||ammo===magSize) return; reloadT=RELOAD[save.up.mag]; snd.reload();}
+function doReload(){if(state!=='play'||reloadT>0||ammo===magSize) return; reloadT=RELOAD[save.up.mag]*gearReload(); snd.reload();}
 const _p0=V3(), _seg=V3();
 function stepBullets(dt){
   for(let i=bullets.length-1;i>=0;i--){
@@ -280,7 +280,7 @@ function stepBullets(dt){
       if(glassMeshes.length){ const gh=RC.intersectObjects(glassMeshes,false)[0]; if(gh&&(!hit||gh.distance<hit.distance)&&!(b.glass||(b.glass=new Set())).has(gh.object)){ b.glass.add(gh.object); glassHit(gh.point); deflect(b,.004,.96); } }
       // trees: trunks stop it, leaves nudge it
       if(city.trees){ const tr=treeOnSeg(_p0,b.pos,b); if(tr&&(!hit||tr.d<hit.distance)){ hit={point:tr.point,object:null,distance:tr.d,tree:true}; } }
-      if(hit&&gun().pen&&!b.penned&&!(hit.object.userData&&(hit.object.userData.p||hit.object.userData.hz))){
+      if(hit&&gun().pen&&!b.penned&&!(hit.object.userData&&(hit.object.userData.p||hit.object.userData.hz||hit.object.userData.feat))){
         const dir=_seg.clone(), far=hit.point.clone().addScaledVector(dir,gun().pen); RC.set(far,dir.clone().negate()); RC.near=0; RC.far=gun().pen;
         const back=RC.intersectObject(hit.object,false)[0];
         if(back){ b.penned=true; puff(hit.point,.7,false); b.pos.copy(back.point).addScaledVector(dir,.06); b.vel.multiplyScalar(.85); continue; }
@@ -314,6 +314,7 @@ function treeOnSeg(a,c,b){ // segment vs trunk cylinders and canopy cones (same 
   }
   return best; }
 function impact(b,hit){
+  if(gearImpact(b,hit)) return;
   if(featImpact(b,hit)) return;
   if(distractImpact(b,hit)) return;
   if(M&&M.range){ if(!rangeImpact(b,hit)){ puff(hit.point,hit.water?1.4:1,false); snd.impact(EYE.distanceTo(hit.point),false); } else puff(hit.point,.35,false); return; }
@@ -503,7 +504,7 @@ function update(dt,rdt){
   if(fightCD>0) fightCD-=dt;
   if(M&&M.range) rangeUpdate(dt);
   if(city&&city.tick) city.tick(dt);
-  featTick(dt); spotTick(dt); distractTick(dt);
+  featTick(dt); spotTick(dt); distractTick(dt); strikeTick(dt); gearHud();
   if(M&&M.endless&&RUN.spawnT>0&&state==='play'&&!endInfo){ RUN.spawnT-=dt; if(RUN.spawnT<=0) spawnWave(); }
   stepBullets(dt);
   updatePeople(dt); updateHazards(dt); updateCars(dt); updateFlags(); updateAmbient(dt); updateFx(dt);

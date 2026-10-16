@@ -183,6 +183,12 @@ h2::after{content:'';flex:1;height:1px;background:var(--line)}
 .intel b{color:var(--fg)}
 .intel .h{color:var(--red);font-weight:600}
 .acts{display:flex;flex-wrap:wrap;gap:10px}
+#bStrike{width:64px;height:64px;padding:0;background:rgba(60,8,4,.7);border:2px solid #ff5442;color:#ffb3a8;font-family:var(--mono);font-size:11px;letter-spacing:.06em}
+.gearc{display:grid;gap:6px}.gearc .gh{display:flex;justify-content:space-between;gap:8px}.gearc .gh small{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--muted)}.gearc .gh small.bad{color:var(--red)}
+.gear{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+.gear b{font-size:15px}.gear small{font-family:var(--mono);font-size:12px;color:var(--amber)}.gear .gk{font-family:var(--mono);color:var(--muted)}.gear .gd{grid-column:2/-1;font-size:12px;color:var(--muted);line-height:1.3}
+.gear.on{border-color:var(--amber-dim);background:rgba(255,178,46,.07)}.gear.on .gk{color:var(--amber)}
+
 #achToast{position:absolute;left:50%;top:calc(10px + env(safe-area-inset-top,0px));z-index:60;transform:translate(-50%,-140%);transition:transform .35s ease;display:grid;gap:2px;min-width:240px;max-width:min(92vw,420px);padding:10px 14px;border-radius:6px;background:rgba(12,16,13,.96);border:1px solid var(--amber-dim);border-left:3px solid var(--amber);box-shadow:0 8px 24px rgba(0,0,0,.5);pointer-events:none}
 #achToast.on{transform:translate(-50%,0)}
 #achToast small{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--amber)}#achToast b{font-size:18px}#achToast span{font-size:13px;color:var(--muted)}
@@ -253,7 +259,7 @@ h3.ok{color:var(--amber)} h3.bad{color:var(--red)}
     <div id="hint" hidden></div>
     <div class="lc">
       <div id="zoomTrack" hidden aria-label="Zoom"><div id="zoomKnob">8x</div></div>
-      <div class="lcol"><button class="ctl" id="bTherm" hidden>THERMAL</button><button class="ctl" id="bZstep" hidden>8x</button><button class="ctl" id="bDial" hidden>DIAL<br>300</button><button class="ctl" id="bBreath" hidden>HOLD<br>BREATH</button></div>
+      <div class="lcol"><button class="ctl" id="bTherm" hidden>THERMAL</button><button class="ctl" id="bZstep" hidden>8x</button><button class="ctl" id="bDial" hidden>DIAL<br>300</button><button class="ctl" id="bStrike" hidden>AIR<br>STRIKE</button><button class="ctl" id="bBreath" hidden>HOLD<br>BREATH</button></div>
     </div>
     <div class="rc">
       <button class="ctl" id="bReload" aria-label="Reload"><span class="big" id="cAmmo">5/5</span><span class="sm">RELOAD</span></button>
@@ -427,6 +433,7 @@ h3.ok{color:var(--amber)} h3.bad{color:var(--red)}
 <script src="js/story.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/social.js"></script>
+<script src="js/gear.js"></script>
 <script src="js/ach.js"></script>
 <script src="js/ui.js"></script>
 

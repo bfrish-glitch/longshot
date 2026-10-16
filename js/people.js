@@ -312,7 +312,7 @@ function posGetaway(){
 function updateGetaway(dt){
   const G=getaway, d=G.driver; if(!d) return;
   const live=alive(d);
-  let vmax=G.flat?2.2:G.boost?9:6;
+  let vmax=G.dead?0:G.flat?2.2:G.boost?9:6;
   if(live&&!G.boost) for(const st of G.stops){ if(st.done||G.s>st.s+.5) continue; const gap=st.s-G.s; vmax=Math.min(vmax,Math.sqrt(2*3.5*Math.max(0,gap))); if(gap<.6&&G.v<.3){ st.t+=dt; if(st.t>4.5) st.done=true; } break; }
   G.v=live?(G.v<vmax?Math.min(vmax,G.v+3*dt):Math.max(vmax,G.v-6*dt)):Math.max(0,G.v-7*dt);
   // lead marker: where to put the crosshair so the round meets the moving driver
@@ -327,6 +327,7 @@ function updateGetaway(dt){
   if(live&&G.g.position.x>0&&Math.abs(Math.atan2(G.g.position.x-EYE.x,-(G.g.position.z-EYE.z)))>YAW_LIM+.08&&state==='play'&&!endInfo) fail('The target drove out of sight.');
 }
 function sniperFire(p){
+  if(typeof gearShield==='function'&&gearShield()) return;
   snd.crack(); hurt=1; kick=1.8; playerHp--; if(navigator.vibrate&&save.opts.haptic!==false) try{navigator.vibrate([60,40,90]);}catch(e){}
   if(playerHp<=0) fail(M.fight?'You were shot.':'A counter-sniper took you out.');
   else { hintMsg=M.fight?(playerHp===1?'You were hit. One more and you’re down.':'You were hit. Drop whoever has the red ring first.'):'You were hit. One more and you’re down. Find the glint.'; hintT=4; }

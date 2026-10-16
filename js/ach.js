@@ -18,6 +18,10 @@ const ACH=[
   {id:'curious',c:'Style',n:'Curiosity',d:'Drop a guard who walked over to check a distraction.',$:300},
   {id:'heat',c:'Style',n:'Heat Signature',d:'Make a kill through the thermal scope.',$:200},
   {id:'counter',c:'Style',n:'Counter-Sniper',d:'Take out an enemy sniper.',$:300},
+  {id:'strike1',c:'Style',n:'Air Support',d:'Take out a hostile with an air strike.',$:300},
+  {id:'danger',c:'Style',n:'Danger Close',d:'Two or more hostiles in one air strike.',$:750},
+  {id:'engine',c:'Style',n:'Engine Block',d:'Stop the getaway car with the Hammer .50 BMG.',$:750},
+  {id:'cowboy',c:'Style',n:'Lever Action',d:'Clear a contract with the Ranch .45-70.',$:400},
   {id:'ghost',c:'Style',n:'Ghost',d:'Clear a contract without anyone raising the alarm.',$:400},
   // career
   {id:'first',c:'Career',n:'First Contract',d:'Clear any contract.',$:100},
@@ -32,7 +36,7 @@ const ACH=[
   {id:'wave5',c:'Career',n:'Wave Rider',d:'Clear 5 waves in Endless.',$:500},
   {id:'wave10',c:'Career',n:'Unstoppable',d:'Clear 10 waves in Endless.',$:2000},
   // armory
-  {id:'rack',c:'Armory',n:'Full Rack',d:'Own all four rifles.',$:1500},
+  {id:'rack',c:'Armory',n:'Full Rack',d:'Own every rifle.',$:3000},
   {id:'kitted',c:'Armory',n:'Fully Kitted',d:'Max out every upgrade track.',$:2000},
   {id:'midas',c:'Armory',n:'Midas',d:'Buy the 24k gold finish.',$:1000},
   // range
@@ -63,7 +67,7 @@ function achKill(p,part,dist,accident){ if(!p.hostile||!M||M.range) return; achS
   achCareer(); }
 function achCareer(){ const S=save.ast; for(const a of ACH) if(a.stat&&S[a.stat]>=a.goal) achGet(a.id); }
 function achFinish(ok,stars){ if(!M||M.range||!stats) return; if(M.endless){ const w=RUN.wave-1; if(w>=5) achGet('wave5'); if(w>=10) achGet('wave10'); return; } if(!ok) return;
-  achGet('first'); if(stats.shots&&stats.hits>=stats.shots) achGet('surgeon'); if(timeLeft>=(M.time||120)*2/3) achGet('quick');
+  achGet('first'); if(save.guns.eq==='lever') achGet('cowboy'); if(stats.shots&&stats.hits>=stats.shots) achGet('surgeon'); if(timeLeft>=(M.time||120)*2/3) achGet('quick');
   if(!stats.alerted) achGet('ghost'); if(totalHos>=4&&stats.heads>=stats.kills&&stats.kills>=totalHos&&!stats.accidents) achGet('sweep');
   if(M.vet){ achGet('vet'); if(Object.values(save.vstars||{}).filter(s=>s>0).length>=10) achGet('vet10'); }
   if(M.daily) achGet('daily'); achCollect(); }

@@ -147,7 +147,7 @@ ov.addEventListener('contextmenu',e=>{e.preventDefault(); if(state==='play') tog
 ov.addEventListener('wheel',e=>{if(state!=='play'||!scoped) return; e.preventDefault(); zoom=clamp(zoom*(e.deltaY<0?1.12:1/1.12),MIN_ZOOM,maxZoom());},{passive:false});
 function toggleScope(){if(state!=='play') return; scoped=!scoped; blink=.85; el.scope.classList.toggle('on',scoped); el.scope.textContent=scoped?'EXIT':'SCOPE'; if(!scoped) holding=false; snd.click();}
 const press=(id,fn)=>$(id).addEventListener('pointerdown',e=>{e.preventDefault(); unlockAudio(); fn(e);});
-press('#bScope',toggleScope); press('#bReload',doReload);
+press('#bScope',toggleScope); press('#bStrike',()=>callStrike()); press('#bReload',doReload);
 press('#bTherm',()=>{thermOn=!thermOn; snd.click();});
 press('#bDial',()=>{ const R=lastRange?clamp(Math.round(lastRange/25)*25,100,1200):ZERO; setDial(Math.abs(R-DIAL)<13&&DIAL!==ZERO?ZERO:R); snd.click(); });
 press('#bZstep',()=>{const lv=[...new Set([MIN_ZOOM,8,Math.round((8+maxZoom())/2),maxZoom()])].filter(v=>v<=maxZoom()).sort((a,b)=>a-b); zoom=lv.find(v=>v>zoom+.5)||lv[0]; snd.click();});
@@ -221,7 +221,7 @@ function gunCards(){
   const cards=Object.entries(GUNS).map(([k,g])=>{const own=G.owned.includes(k), eq=G.eq===k;
     const btn=eq?'<button class="buy" disabled>EQUIPPED</button>':own?`<button class="buy" data-g="${k}" data-a="eq">EQUIP</button>`:`<button class="buy" data-g="${k}" data-a="buy" ${save.cash<g.cost?'disabled':''}>$${g.cost.toLocaleString()}</button>`;
     return `<div class="gc${eq?' eq':''}"><div class="nm">${g.name}</div><div class="d">${g.desc}</div>
-      <div class="st"><span>VELOCITY</span>${bar((g.v0-700)/250)}<span>FIRE RATE</span>${bar(1-(g.cd-.2)/1.3)}<span>STABILITY</span>${bar(1.6-g.sway)}<span>PENETRATION</span>${bar(g.pen?1:.1)}</div>${btn}</div>`;});
+      <div class="st"><span>VELOCITY</span>${bar((g.v0-400)/550)}<span>FIRE RATE</span>${bar(1-(g.cd-.2)/1.3)}<span>STABILITY</span>${bar(1.6-g.sway)}<span>PENETRATION</span>${bar(g.pen?clamp(g.pen/2.4,.3,1):.1)}</div>${btn}</div>`;});
   const sb=G.supOwned?`<button class="buy" data-a="sup">${G.sup?'ON · TAP TO REMOVE':'OFF · TAP TO FIT'}</button>`:`<button class="buy" data-a="supbuy" ${save.cash<SUP_COST?'disabled':''}>$${SUP_COST}</button>`;
   cards.push(`<div class="gc${G.supOwned&&G.sup?' eq':''}"><div class="nm">Suppressor</div><div class="d">Fits any rifle. Kills and misses alert hostiles in a much smaller radius, and there is no muzzle flash. Rounds fly about 4% slower.</div>${sb}</div>`);
   return cards.join('');
