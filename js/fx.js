@@ -51,8 +51,8 @@ const blurMat=new THREE.ShaderMaterial({uniforms:{tex:{value:null},dir:{value:ne
     c+=(texture2D(tex,vUv+dir*3.2308).rgb+texture2D(tex,vUv-dir*3.2308).rgb)*.0703;
     gl_FragColor=vec4(c,1.);}`});
 const GRADE={ // lift (shadow tint), gain (highlight tint), saturation, contrast, bloom amount, bloom threshold
-  day:  {lift:[.01,.016,.03], gain:[1.0,.97,.92], sat:1.16, con:1.14, bloom:.32, th:.82},
-  dusk: {lift:[.03,.012,.03],  gain:[1.08,.98,.88], sat:1.12, con:1.12, bloom:.55, th:.62},
+  day:  {lift:[.012,.018,.035], gain:[1.03,.99,.92], sat:1.32, con:1.2, bloom:.28, th:.85},
+  dusk: {lift:[.03,.012,.03],  gain:[1.08,.98,.88], sat:1.18, con:1.14, bloom:.5, th:.62},
   night:{lift:[.006,.012,.03], gain:[1.0,.98,1.04], sat:1.05, con:1.08, bloom:.9, th:.45}};
 function skyMaterial(P,sd,palKey){
   const glow=palKey==='dusk'?1.4:palKey==='night'?.25:.8;
@@ -69,6 +69,22 @@ function skyMaterial(P,sd,palKey){
       gl_FragColor=linearToOutputTexel(vec4(c,1.)); }`});
 }
 const pmrem=new THREE.PMREMGenerator(renderer); let envRT=null;
+/* "film" look: a soft fresnel rim of sky light on every surface, the way CG features separate shapes from the background,
+   plus a gentle saturation lift. Shared uniforms so each map sets its own rim color. */
+const FILMU={filmRim:{value:new THREE.Color(0x8fb6e0)},filmSat:{value:1.08},filmWrap:{value:0}};
+function filmify(m,kind){
+  if(!m||m.userData.film||!(m.isMeshStandardMaterial)) return m; m.userData.film=1;
+  const k=kind==='skin'?1.7:kind==='soft'?.6:1, warm=kind==='skin'?1:0;
+  m.onBeforeCompile=sh=>{ Object.assign(sh.uniforms,FILMU); sh.uniforms.filmK={value:k}; sh.uniforms.filmWarm={value:warm};
+    sh.fragmentShader='uniform vec3 filmRim; uniform float filmSat, filmK, filmWarm;\n'+sh.fragmentShader.replace('gl_FragColor = vec4( outgoingLight, diffuseColor.a );',
+      `{ vec3 Vd=normalize(vViewPosition); float nv=clamp(dot(normalize(normal),Vd),0.,1.); float fr=pow(1.-nv,3.);
+         outgoingLight+=filmRim*fr*filmK*(.35+.65*dot(diffuseColor.rgb,vec3(.333)));
+         outgoingLight+=diffuseColor.rgb*vec3(.06,.025,.012)*filmWarm*(1.-nv*.5);
+         float lm=dot(outgoingLight,vec3(.2126,.7152,.0722)); outgoingLight=max(mix(vec3(lm),outgoingLight,filmSat),0.); }
+       gl_FragColor = vec4( outgoingLight, diffuseColor.a );`); };
+  m.customProgramCacheKey=()=>'film'+kind; m.needsUpdate=true; return m; }
+const FILM_RIM={day:[0x9cc4ec,.42],dusk:[0xffa274,.55],night:[0x5a78c0,.38]};
+if(save.opts.fx!==false){ renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.06; }
 const FX=()=>save.opts.fx!==false;
 function upgradeWorld(){
   // image-based lighting: a blurred copy of this map's sky lights and reflects off every surface
@@ -86,18 +102,22 @@ function upgradeWorld(){
       else if(m.transparent) n=new THREE.MeshStandardMaterial(Object.assign(base,{roughness:.04,metalness:.4,envMapIntensity:2,opacity:Math.min(.45,m.opacity*2.2)}));
       else n=new THREE.MeshStandardMaterial(Object.assign(base,{roughness:clamp(1-m.shininess/100,.25,.85),metalness:.55,envMapIntensity:1}));
     }
+    if(n&&m.map&&m.map.image===GRAIN){ const hsl={}; n.color.getHSL(hsl); if(hsl.h>.17&&hsl.h<.42&&hsl.s>.2){ const t=new THREE.CanvasTexture(GRASS); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.copy(m.map.repeat).multiplyScalar(.6); t.anisotropy=ANISO; n.map=t; n.color.multiplyScalar(1.05); }
+      else if(hsl.s<.1&&hsl.l>.33&&city.kind!=='snow'){ const t=new THREE.CanvasTexture(PAVE); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.copy(m.map.repeat).multiplyScalar(.5); t.anisotropy=ANISO; n.map=t; } }
     if(n&&m.map&&m.map.userData&&m.map.userData.pbr){ const t=m.map.userData.pbr; n.roughnessMap=t; n.metalnessMap=t; n.roughness=1; n.metalness=1; n.envMapIntensity=night?1.2:1.05; } // glass panes reflect, walls stay matte
-    if(n){ if(n.map) n.map.anisotropy=ANISO; m.dispose(); }
+    if(n){ if(n.map) n.map.anisotropy=ANISO; m.dispose(); filmify(n,isWater(m)?'soft':''); }
     cache.set(m,n||m); return n||m;
   };
   world.traverse(o=>{ if(o.isMesh) o.material=Array.isArray(o.material)?o.material.map(conv):conv(o.material);
-    if(o.isHemisphereLight) o.intensity*=night?.55:.42; if(o.isAmbientLight) o.intensity*=.5; if(o.isDirectionalLight) o.intensity*=night?1:1.12; });
+    if(o.isHemisphereLight) o.intensity*=night?.55:.4; if(o.isAmbientLight) o.intensity*=.5; if(o.isDirectionalLight) o.intensity*=night?1:1.45; });
+  if(scene.fog&&!night&&!rainOn){ scene.fog.near*=1.5; scene.fog.far*=1.45; } // crisper air: a film set, not a smoggy afternoon
+  { const fr=FILM_RIM[city.pal]||FILM_RIM.day; FILMU.filmRim.value.set(fr[0]).multiplyScalar(fr[1]*(rainOn?.6:1)); FILMU.filmSat.value=rainOn?1.0:1.18; }
   const G=GRADE[city.pal]||GRADE.day; brightMat.uniforms.th.value=G.th*(rainOn?1.05:1);
   const u=postMat.uniforms; u.lift.value.set(...G.lift); u.gainC.value.set(...G.gain); u.sat.value=rainOn?G.sat*.82:G.sat; u.con.value=G.con; u.bloom.value=G.bloom;
 }
 // rifle: PBR metal so it picks up the sky
 {const rc=new Map(); rifle.traverse(o=>{ if(!o.isMesh||!o.material.isMeshPhongMaterial) return; const m=o.material; let n=rc.get(m);
-  if(!n){n=new THREE.MeshStandardMaterial({color:m.color,emissive:m.emissive,roughness:clamp(1-m.shininess/90,.22,.8),metalness:m.shininess>40?.8:.25,envMapIntensity:1.1}); rc.set(m,n);} if(FX()) o.material=n; });}
+  if(!n){n=filmify(new THREE.MeshStandardMaterial({color:m.color,emissive:m.emissive,roughness:clamp(1-m.shininess/90,.22,.8),metalness:m.shininess>40?.8:.25,envMapIntensity:1.1}),''); rc.set(m,n);} if(FX()) o.material=n; });}
 rifle.userData.style();
 function renderFrame(){
   const lens=state==='play'&&scoped&&fov<BASE_FOV*.7, fx=FX()&&!!city;

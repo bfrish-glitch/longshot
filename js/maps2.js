@@ -126,14 +126,14 @@ function buildSuburb(seed,palKey,rain){
     for(let q=-1;q<=1;q+=2) addBox(dark,1.6,1.4,.1,x+q*w/4,3.4,z+side*(d/2+.05),[side>0?4:5]);
     const yz=z+side*(d/2+7); for(let fx=x-14;fx<=x+14;fx+=2) addBox(fenceC,.1,1.6,.1,fx,.8,yz+side*6,[0,1,4,5]);
     if(r()<.35){ addBox(pool,7,.1,4,x,.06,yz,[2]); ob(x-3.6,x+3.6,yz-2.1,yz+2.1,0,.5); } else if(r()<.5){ addBox(hedge,6,1.6,1.4,x+rr(r,-5,5),.8,yz,[0,1,2,4,5]); }
-    if(r()<.5){ const tx=x+rr(r,-12,12), tz=yz+rr(r,-4,4); addBox(trunk,.5,3,.5,tx,1.5,tz,[0,1,4,5]); addGeo(canopy,new THREE.IcosahedronGeometry(2.6,0),tx,4.4,tz); ob(tx-.4,tx+.4,tz-.4,tz+.4,0,5); }
+    if(r()<.5){ const tx=x+rr(r,-12,12), tz=yz+rr(r,-4,4); addBox(trunk,.5,3,.5,tx,1.5,tz,[0,1,4,5]); addGeo(canopy,puffyCanopy(2.4,j*7+k+h),tx,4.5,tz); ob(tx-.4,tx+.4,tz-.4,tz+.4,0,5); }
     yards.push({x0:x-13,x1:x+13,z0:yz-4.5,z1:yz+4.5,y:.05}); }
   const wc=[0xe8e2d4,0xc9d6e2,0xd8c7a8,0xa9b8a0];
   walls.forEach((w,i)=>add(toMesh(w,new THREE.MeshLambertMaterial({color:wc[i],map:grainTex(1)})),true));
   add(toMesh(roofC,new THREE.MeshLambertMaterial({color:0x6a4a3e})),true); add(toMesh(roadC,new THREE.MeshLambertMaterial({color:0x3a3c40})),false);
   add(toMesh(fenceC,new THREE.MeshLambertMaterial({color:0xefeae0})),false); add(toMesh(hedge,new THREE.MeshLambertMaterial({color:0x2f5a2a})),true);
   add(toMesh(pool,new THREE.MeshPhongMaterial({color:0x3aa6d8,shininess:90,specular:0xffffff})),false); add(toMesh(dark,new THREE.MeshLambertMaterial({color:0x26313a})),false);
-  add(toMesh(tank,new THREE.MeshLambertMaterial({color:0xb8c0c6})),true); add(toMesh(trunk,new THREE.MeshLambertMaterial({color:0x5a3e28})),false); add(toMesh(canopy,new THREE.MeshLambertMaterial({color:0x3f6b30})),true);
+  add(toMesh(tank,new THREE.MeshLambertMaterial({color:0x7f9aa8,map:grainTex(3)})),true); add(toMesh(trunk,new THREE.MeshLambertMaterial({color:0x5a3e28})),false); add(toMesh(canopy,new THREE.MeshLambertMaterial({color:0x3f6b30})),true);
   scene.updateMatrixWorld(true);
   city={kind:'suburb',P,pal:palKey,sunDir:sd.clone(),startPitch:-.12,spots:{ yard:()=>{const R=pick(MR,yards); return {pos:randIn(R,MR),rect:R,y:R.y};}, street:()=>{const R=pick(MR,streets); return {pos:randIn(R,MR),rect:R,y:R.y};} }};
 }

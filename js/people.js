@@ -37,7 +37,7 @@ const THERMMAT=new THREE.MeshBasicMaterial({color:0x00ff00,fog:false,skinning:tr
 function applyThermal(){
   const want=thermOn&&scoped&&state==='play';
   if(want===thermApplied) return; thermApplied=want;
-  for(const p of people){if(!p.mesh) continue; p.mesh.root.traverse(o=>{ if(!o.isMesh||o.material===HBMAT) return; if(!o.userData.mat0) o.userData.mat0=o.material; o.material=want?THERMMAT:o.userData.mat0; });}
+  for(const p of people){if(!p.mesh) continue; p.mesh.root.traverse(o=>{ if(!o.isMesh||o.material===HBMAT||o.userData.blob) return; if(!o.userData.mat0) o.userData.mat0=o.material; o.material=want?THERMMAT:o.userData.mat0; });}
 }
 const LODMAT=new THREE.MeshLambertMaterial({vertexColors:true});
 function lodGeo(p){
@@ -105,7 +105,7 @@ async function loadChars(){
   CHAR.ready=true;
 }
 const CHARMATS=new Map();
-function charMat(skin){let m=CHARMATS.get(skin); if(!m){m=FX()?new THREE.MeshStandardMaterial({map:skin.tex,skinning:true,roughness:.78,metalness:0,envMapIntensity:.55}):new THREE.MeshLambertMaterial({map:skin.tex,skinning:true}); CHARMATS.set(skin,m);} return m;}
+function charMat(skin){let m=CHARMATS.get(skin); if(!m){m=FX()?filmify(new THREE.MeshStandardMaterial({map:skin.tex,skinning:true,roughness:.7,metalness:0,envMapIntensity:.6}),'skin'):new THREE.MeshLambertMaterial({map:skin.tex,skinning:true}); CHARMATS.set(skin,m);} return m;}
 function CHAR_BONE_S(rig,b){const v=new THREE.Vector3(); rig.rest[b].M.decompose(new THREE.Vector3(),new THREE.Quaternion(),v); return v.x;}
 function makePersonChar(p,r){
   const root=new THREE.Group(), body=new THREE.Group(); root.add(body);
@@ -133,10 +133,23 @@ function makePersonChar(p,r){
 const sm=x=>{x=clamp(x,0,1); return x*x*(3-2*x);};
 function charTargets(p,moving,run,sw){
   const t={LA:[0,0,-1.25],RA:[0,0,1.25],LF:-.15,RF:.15,LUL:0,RUL:0,LL:0,RL:0,SPx:0,SPz:0,HDy:0,HDx:0};
-  const amp=(run?.75:.45)*(p.stride||1);
-  if(moving){ t.LUL=-sw*amp; t.RUL=sw*amp; t.LL=Math.max(0,sw)*amp*1.5; t.RL=Math.max(0,-sw)*amp*1.5; t.LA=[sw*amp*.8,0,-1.25]; t.RA=[-sw*amp*.8,0,1.25]; if(run){t.LF=-1.2; t.RF=1.2; t.SPx=.16;} t.HDy=0; }
+  const amp=(run?.78:.42)*(p.stride||1), ph=p.phase||0;
+  if(moving){ // walk cycle: heel strike on a straight leg, knee lifts on the passing pose, body bobs twice a cycle, arms lag the legs
+    const S=Math.sin(ph), K=run?1.65:.95, lag=.32;
+    const wrap=f=>Math.atan2(Math.sin(f),Math.cos(f));
+    const knee=f=>{ f=wrap(f); let k=run?.22:.04; if(f>-1.37&&f<1.15){ const u=(f+1.37)/2.52; k+=K*Math.sin(Math.PI*Math.pow(u,1.2)); } else { const v=wrap(f-1.15); if(v>0&&v<1.1) k+=.13*Math.sin(Math.PI*v/1.1); } return k; }; // swing lift peaks just after passing, small give after heel strike
+    const thL=-amp*Math.sin(ph+.4)-.1, thR=amp*Math.sin(ph+.4)-.1, kL=knee(ph), kR=knee(ph+Math.PI);
+    t.LUL=thL; t.RUL=thR; t.LL=kL; t.RL=kR;
+    t.LFT=-(thL+kL)*.55+(run?.2:.12)*Math.max(0,Math.cos(ph+.3)); t.RFT=-(thR+kR)*.55+(run?.2:.12)*Math.max(0,Math.cos(ph+Math.PI+.3));
+    const A=amp*(run?1.0:.72), sa=Math.sin(ph-lag);
+    t.LA=[A*sa,0,-1.28]; t.RA=[-A*sa,0,1.28]; t.LF=-(run?1.25:.22)-(run?.2:.3)*Math.max(0,-sa); t.RF=(run?1.25:.22)+(run?.2:.3)*Math.max(0,sa);
+    t.SPx=run?.2:.05; t.SPy=(run?.16:.11)*S; t.HPy=-(run?.1:.07)*S; t.HPz=.035*S; t.SPz=-.02*S;
+    t.HDx=-.03*Math.cos(2*ph)-(run?.1:0); t.HDy=-.06*S; // head stays level and steady while the body works under it
+    t.bob=(run?.055:.028)*Math.cos(2*ph)+(run?.02:.012);
+  }
   else {
-    t.SPx=.02*Math.sin(p.ptime*1.6); t.HDy=.4*Math.sin(p.ptime*.35+p.phase); t.HDx=.05*Math.sin(p.ptime*.5);
+    if(!p.lkT||p.ptime>p.lkT){ p.lkY=MR()<.35?0:rr(MR,-.6,.6); p.lkX=rr(MR,-.06,.1); p.lkT=p.ptime+rr(MR,1.4,4.2); }
+    const br=Math.sin(p.ptime*1.7+p.phase); t.SPx=.025*br; t.CHx=-.02*br; t.HDy=p.lkY; t.HDx=p.lkX+.012*br; t.bob=.004*br;
     t.SPz=.035*Math.sin(p.ptime*.23+p.phase); t.LUL=.05*Math.max(0,Math.sin(p.ptime*.23+p.phase)); t.RUL=.05*Math.max(0,-Math.sin(p.ptime*.23+p.phase)); // weight shift
     if(p.duckT>0){ t.SPx=.6; t.LA=[-1.4,0,-.9]; t.RA=[-1.4,0,.9]; t.LF=-2.0; t.RF=2.0; t.LUL=-1.0; t.RUL=-1.0; t.LL=1.5; t.RL=1.5; t.HDx=.35; t.HDy=0; return t; }
     if(p.startT>0){ t.HDy=p.lookY||0; t.HDx=-.12; t.SPx=-.03; }
@@ -154,33 +167,47 @@ function charTargets(p,moving,run,sw){
   return t;
 }
 function animChar(p,dt,moving,run){
-  const rig=p.rig, c=p.cur, k=Math.min(1,dt*(moving?16:5));
-  const t=charTargets(p,moving,run,moving?Math.sin(p.phase):0);
-  const L=(key,v)=>{ if(Array.isArray(v)){ const a=c[key]||(c[key]=v.slice()); for(let i=0;i<3;i++) a[i]+=(v[i]-a[i])*k; return a;} c[key]=(c[key]===undefined?v:c[key]+(v-c[key])*k); return c[key]; };
+  const rig=p.rig, c=p.cur, k=Math.min(1,dt*(moving?(run?18:14):6)), kh=Math.min(1,dt*4.5);
+  const t=charTargets(p,moving,run,0);
+  const L=(key,v,kk)=>{ const q=kk||k; if(Array.isArray(v)){ const a=c[key]||(c[key]=v.slice()); for(let i=0;i<3;i++) a[i]+=(v[i]-a[i])*q; return a;} c[key]=(c[key]===undefined?v:c[key]+(v-c[key])*q); return c[key]; };
+  // turning: the head leads into the new direction before the body comes round
+  let turn=0; if(p.mesh&&p.mesh.root){ turn=p.heading-p.mesh.root.rotation.y; turn=Math.atan2(Math.sin(turn),Math.cos(turn)); }
   const la=L('LA',t.LA), ra=L('RA',t.RA);
   pose(rig,'LeftArm',la[0],la[1],la[2]); pose(rig,'RightArm',ra[0],ra[1],ra[2]);
   pose(rig,'LeftForeArm',0,L('LF',t.LF),0); pose(rig,'RightForeArm',0,L('RF',t.RF),0);
   pose(rig,'LeftUpLeg',L('LUL',t.LUL),0,0); pose(rig,'RightUpLeg',L('RUL',t.RUL),0,0);
   pose(rig,'LeftLeg',L('LL',t.LL),0,0); pose(rig,'RightLeg',L('RL',t.RL),0,0);
-  pose(rig,'Spine',L('SPx',t.SPx),0,L('SPz',t.SPz)); pose(rig,'Neck',L('HDx',t.HDx),L('HDy',t.HDy)*.5,0); pose(rig,'Head',0,c.HDy*.5,0);
+  pose(rig,'LeftFoot',L('LFT',t.LFT||0),0,0); pose(rig,'RightFoot',L('RFT',t.RFT||0),0,0);
+  pose(rig,'Hips',0,L('HPy',t.HPy||0),L('HPz',t.HPz||0));
+  pose(rig,'Spine',L('SPx',t.SPx),L('SPy',t.SPy||0),L('SPz',t.SPz)); pose(rig,'Chest',L('CHx',t.CHx||0),0,0);
+  const hy=L('HDy',clamp(t.HDy+clamp(turn,-.7,.7)*.8,-1,1),moving?k:kh), hx=L('HDx',t.HDx,moving?k:kh);
+  pose(rig,'Neck',hx,hy*.5,0); pose(rig,'Head',hx*.5,hy*.5,0);
+  p.bobY=L('bob',t.bob||0);
 }
 function deathChar(p){
-  const m=p.mesh, rig=p.rig, t=p.deadT, k1=sm(t/.3), k2=sm((t-.24)/.6), hs=p.hitPart==='head'?sm(t/.07)*(1-k1)*.35:0;
+  const m=p.mesh, rig=p.rig, t=p.deadT, k1=sm(t/.28), ft=clamp((t-.2)/.5,0,1), k2=ft*ft, land=Math.max(0,t-.7);
+  const bounce=land>0?Math.sin(land*16)*Math.exp(-land*7):0, flop=land>0?Math.sin(land*11+.6)*Math.exp(-land*4.5):0;
+  const hs=p.hitPart==='head'?Math.sin(clamp(t/.18,0,1)*Math.PI)*.5:0;
   pose(rig,'LeftUpLeg',-1.25*k1*(1-.55*k2),0,0); pose(rig,'RightUpLeg',-1.15*k1*(1-.5*k2),0,0);
-  pose(rig,'LeftLeg',2.0*k1*(1-.6*k2),0,0); pose(rig,'RightLeg',1.9*k1*(1-.55*k2),0,0);
-  pose(rig,'LeftArm',.3*k1+p.fall*.5*k2,0,-1.4); pose(rig,'RightArm',.3*k1+p.fall*.5*k2,0,1.4); pose(rig,'LeftForeArm',0,-.1,0); pose(rig,'RightForeArm',0,.1,0);
-  pose(rig,'Spine',.2*k1,0,0); pose(rig,'Head',.3*k1,0,0);
-  m.body.position.y=-.42*k1*(1-k2*.86); m.body.rotation.x=p.fall*1.42*k2-hs; m.body.rotation.z=p.twist*k2;
+  pose(rig,'LeftLeg',2.0*k1*(1-.6*k2)+.25*flop,0,0); pose(rig,'RightLeg',1.9*k1*(1-.55*k2)-.2*flop,0,0);
+  pose(rig,'LeftArm',.3*k1-p.fall*(.85*k2+.3*flop),0,-1.4+.25*k2+.2*flop); pose(rig,'RightArm',.3*k1-p.fall*(.75*k2-.3*flop),0,1.4-.3*k2-.25*flop);
+  pose(rig,'LeftForeArm',0,-.1-.3*Math.abs(flop),0); pose(rig,'RightForeArm',0,.1+.3*Math.abs(flop),0);
+  pose(rig,'Spine',.2*k1-.08*bounce,0,0); pose(rig,'Head',.3*k1-hs+.25*flop,.15*flop,0);
+  if(m.blob){ m.blob.position.z=p.fall*.75*k2; m.blob.scale.set(.95*(p.bw||1)+.4*k2,1,.75+.9*k2); }
+  m.body.position.y=-.42*k1*(1-k2*.86)+.05*Math.abs(bounce); m.body.rotation.x=p.fall*(1.42*k2-.05*bounce)-hs*.4; m.body.rotation.z=p.twist*k2;
 }
 
+const BLOBMAT=new THREE.MeshBasicMaterial({map:radialTex('rgba(0,0,0,.62)','rgba(0,0,0,0)'),transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,fog:true});
+const BLOBGEO=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2);
+function addBlob(p){ if(!p.mesh||p.driver) return; const b=new THREE.Mesh(BLOBGEO,BLOBMAT); b.position.y=.035; b.scale.set(.95*p.bw,1,.75); b.renderOrder=1; b.userData.blob=true; p.mesh.root.add(b); p.mesh.blob=b; } // soft contact shadow so people sit on the ground
 function makePerson(p){
-  if(!CHAR.ready){ makePersonBasic(p); return; }
+  if(!CHAR.ready){ makePersonBasic(p); addBlob(p); return; }
   const m=makePersonChar(p);
   const al=new THREE.Sprite(alertMat); al.position.y=1.95; al.center.set(.5,-1.25); al.visible=false; al.renderOrder=11; m.root.add(al); marks.push(al);
   let mk=null; if(p.hostile){mk=new THREE.Sprite(markMat); mk.position.y=1.95; mk.center.set(.5,-.15); mk.renderOrder=10; mk.visible=markOn(); m.root.add(mk); marks.push(mk);}
   const lod=new THREE.Mesh(lodGeo(p),LODMAT); lod.scale.set(p.bw,p.ht,p.bw); lod.visible=false; m.root.add(lod);
   m.root.position.set(p.x,p.y,p.z); m.root.rotation.y=p.heading; scene.add(m.root);
-  p.mesh=Object.assign(m,{al,mk,lod});
+  p.mesh=Object.assign(m,{al,mk,lod}); addBlob(p);
 }
 function randIn(R,r){return {x:rr(r,R.x0,R.x1),z:rr(r,R.z0,R.z1)};}
 function goalRaw(p,r){ if(p.seg){const t=r(); return {x:p.seg.a.x+(p.seg.b.x-p.seg.a.x)*t,z:p.seg.a.z+(p.seg.b.z-p.seg.a.z)*t};} return randIn(p.rect,r); }

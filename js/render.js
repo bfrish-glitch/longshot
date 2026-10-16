@@ -29,8 +29,32 @@ const GRAIN=(()=>{const c=document.createElement('canvas'); c.width=c.height=256
   const R=mulberry(99); for(let i=0;i<260;i++){const rr2=4+R()*28; x.fillStyle=`rgba(0,0,0,${.01+R()*.025})`; x.beginPath(); x.arc(R()*256,R()*256,rr2,0,TAU); x.fill();}
   for(let i=0;i<9000;i++){x.fillStyle=R()<.5?`rgba(0,0,0,${R()*.12})`:`rgba(255,255,255,${R()*.1})`; x.fillRect(R()*256,R()*256,1.5,1.5);}
   return c;})();
+/* lawn detail for green ground: clover-dark patches, sun-bleached spots, a field of short blade strokes */
+const GRASS=(()=>{const c=document.createElement('canvas'); c.width=c.height=256; const x=c.getContext('2d'); x.fillStyle='rgb(196,204,188)'; x.fillRect(0,0,256,256);
+  const R=mulberry(41); const spot=(cx,cy,rad,col)=>{const g=x.createRadialGradient(cx,cy,0,cx,cy,rad); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; for(const ox of [-256,0,256]) for(const oy of [-256,0,256]){ x.beginPath(); x.arc(cx+ox,cy+oy,rad,0,TAU); x.fill(); } };
+  for(let i=0;i<26;i++) spot(R()*256,R()*256,20+R()*46,R()<.5?'rgba(60,90,30,.22)':'rgba(255,240,170,.22)');
+  for(let i=0;i<5200;i++){ const px=R()*256, py=R()*256, l=2+R()*4, v=R(); x.strokeStyle=v<.5?`rgba(30,60,20,${.1+R()*.2})`:`rgba(255,255,230,${.08+R()*.2})`; x.lineWidth=1; x.beginPath(); x.moveTo(px,py); x.lineTo(px+(R()-.5)*1.6,py-l); x.stroke(); }
+  return c;})();
+/* paving for light grey ground: square slabs with worn joints and a few stains */
+const PAVE=(()=>{const c=document.createElement('canvas'); c.width=c.height=256; const x=c.getContext('2d'), R=mulberry(77); x.fillStyle='rgb(214,212,206)'; x.fillRect(0,0,256,256);
+  for(let i=0;i<8;i++) for(let j=0;j<8;j++){ const v=R()*18-9; x.fillStyle=`rgba(${v>0?255:0},${v>0?255:0},${v>0?240:0},${Math.abs(v)/100})`; x.fillRect(i*32,j*32,32,32); }
+  x.fillStyle='rgba(60,55,50,.35)'; for(let i=0;i<=8;i++){ x.fillRect(i*32-1,0,2,256); x.fillRect(0,i*32-1,256,2); }
+  for(let i=0;i<14;i++){ const g=x.createRadialGradient(0,0,0,0,0,10+R()*20); g.addColorStop(0,'rgba(70,60,50,.12)'); g.addColorStop(1,'rgba(70,60,50,0)'); x.save(); x.translate(R()*256,R()*256); x.fillStyle=g; x.fillRect(-30,-30,60,60); x.restore(); }
+  for(let i=0;i<3000;i++){ x.fillStyle=R()<.5?`rgba(0,0,0,${R()*.08})`:`rgba(255,255,255,${R()*.08})`; x.fillRect(R()*256,R()*256,1.5,1.5); }
+  return c;})();
 function grainTex(rep){const t=new THREE.CanvasTexture(GRAIN); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rep,rep); t.anisotropy=ANISO; return t;}
 const baseGrad=(()=>{const c=document.createElement('canvas'); c.width=4; c.height=64; const x=c.getContext('2d'); const g=x.createLinearGradient(0,0,0,64); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.6)'); x.fillStyle=g; x.fillRect(0,0,4,64); return new THREE.CanvasTexture(c);})();
+/* toy-like tree crowns: a cluster of smooth lobes instead of one faceted ball */
+function puffyCanopy(R,seed){ const rnd=mulberry(seed||7), parts=[[new THREE.IcosahedronGeometry(R*.78,1),0,0,0]];
+  for(let i=0;i<2;i++){ const a=i*3.14+rnd()*.8, rr2=R*(.5+rnd()*.14); parts.push([new THREE.IcosahedronGeometry(rr2,1),Math.cos(a)*R*.52,(rnd()-.35)*R*.42,Math.sin(a)*R*.52]); }
+  parts.push([new THREE.IcosahedronGeometry(R*.5,1),0,R*.52,0]); return geoOf(parts); }
+/* storybook cumulus: stacked soft lobes, white on top, a cool shaded belly */
+const cloudTexes=[11,23,37].map(seed=>{ const c=document.createElement('canvas'); c.width=256; c.height=128; const x=c.getContext('2d'), R=mulberry(seed);
+  const blob=(cx,cy,rad)=>{ const g=x.createRadialGradient(cx,cy,0,cx,cy,rad); g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(.62,'rgba(255,255,255,.95)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.beginPath(); x.arc(cx,cy,rad,0,TAU); x.fill(); };
+  for(let i=0;i<9;i++){ const t=i/8; blob(40+t*176+(R()-.5)*16,78-Math.sin(t*Math.PI)*26+(R()-.5)*10,22+Math.sin(t*Math.PI)*22+R()*8); }
+  for(let i=0;i<5;i++) blob(60+R()*136,92+R()*8,18+R()*8);
+  x.globalCompositeOperation='source-atop'; const sh=x.createLinearGradient(0,30,0,120); sh.addColorStop(0,'rgba(255,255,255,0)'); sh.addColorStop(.55,'rgba(150,165,190,.25)'); sh.addColorStop(1,'rgba(110,125,155,.55)'); x.fillStyle=sh; x.fillRect(0,0,256,128);
+  const t=new THREE.CanvasTexture(c); return t; });
 const puffTex=radialTex('rgba(255,255,255,1)','rgba(255,255,255,0)');
 const glowTex=radialTex('rgba(255,255,255,1)','rgba(255,255,255,0)');
 const alertTex=(()=>{const c=document.createElement('canvas'); c.width=c.height=64; const x=c.getContext('2d'); x.fillStyle='#ff4436'; x.beginPath(); x.arc(32,32,28,0,TAU); x.fill(); x.fillStyle='#fff'; x.font='bold 46px sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('!',32,35); return new THREE.CanvasTexture(c);})();

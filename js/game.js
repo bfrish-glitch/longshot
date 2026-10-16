@@ -460,7 +460,7 @@ function updatePeople(dt){
     if(moving) p.phase+=dt*(run?11:6.5*(p.ws||1.3)/1.3/(p.stride||1));
     p.ptime+=dt;
     if(p.ground&&moving) p.y=city.gY(p.x,p.z);
-    if(p.rig){ if(m.body.visible) animChar(p,dt,moving,run); m.root.position.set(p.x,p.y+(moving?Math.abs(Math.cos(p.phase))*.03:0)-(p.duckT>0?.42:0),p.z); let dh2=p.heading-m.root.rotation.y; dh2=Math.atan2(Math.sin(dh2),Math.cos(dh2)); m.root.rotation.y+=dh2*Math.min(1,dt*8); continue; }
+    if(p.rig){ if(m.body.visible) animChar(p,dt,moving,run); m.root.position.set(p.x,p.y+(p.bobY||0)-(p.duckT>0?.42:0),p.z); let dh2=p.heading-m.root.rotation.y; dh2=Math.atan2(Math.sin(dh2),Math.cos(dh2)); m.root.rotation.y+=dh2*Math.min(1,dt*8); continue; }
     const t=poseT(p,moving,run,moving?Math.sin(p.phase):0), k=Math.min(1,dt*(moving?20:5));
     const L=(o,a,v)=>{o[a]+=(v-o[a])*k;};
     L(m.thighL.rotation,'x',t.tL); L(m.thighR.rotation,'x',t.tR); L(m.shinL.rotation,'x',t.sL); L(m.shinR.rotation,'x',t.sR);

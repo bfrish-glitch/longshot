@@ -54,8 +54,8 @@ function applyGun(){ const g=gun(); V0=g.v0*(supOn()&&!g.quiet?.96:1); BOLT=g.cd
 let YAW_LIM=.95, PITCH_MIN=-.55, PITCH_MAX=.22;
 
 const PAL={
-  day:{skyTop:0x4f86c6,skyHor:0xdbe5ea,fog:0xc9d5de,fogN:380,fogF:2700,hemiS:0xe8f2ff,hemiG:0x6b6458,hemiI:.95,sun:0xfff3dc,sunI:.85,sunDir:[.45,.62,.2],walls:['#9ca5ae','#b6ada1','#808b97','#c3c0b7','#8f8579'],glass:'#5d7487',lit:'#9fb6c8',litP:0,em:0,roof:0x6f6f6b,ground:0x3e4145,pave:0x8b8a84,grass:0x5f7c44,tree:0x3e6233,trunk:0x4a3626,disc:0xfffbe8,lamp:0},
-  dusk:{skyTop:0x1d2850,skyHor:0xf09460,fog:0xa77567,fogN:300,fogF:2100,hemiS:0xffc9a6,hemiG:0x2d2533,hemiI:.72,sun:0xff9a5c,sunI:1.0,sunDir:[.55,.1,-.8],walls:['#6b5b67','#7b6559','#554b5d','#87766b','#5f5149'],glass:'#262433',lit:'#ffcf7a',litP:.36,em:.75,roof:0x4a4048,ground:0x2a272c,pave:0x57525a,grass:0x3d4a2e,tree:0x2a3424,trunk:0x2a2018,disc:0xffc07a,lamp:1},
+  day:{skyTop:0x4f86c6,skyHor:0xdbe5ea,fog:0xc9d5de,fogN:380,fogF:2700,hemiS:0xe8f2ff,hemiG:0x6b6458,hemiI:.95,sun:0xfff3dc,sunI:.85,sunDir:[.45,.62,.2],walls:['#c98a6a','#e0c9a0','#86a9bf','#d9d2c0','#b07a68','#9fb59a','#e3b47c'],glass:'#5d7487',lit:'#9fb6c8',litP:0,em:0,roof:0x6f6f6b,ground:0x3e4145,pave:0x8b8a84,grass:0x6b9a42,tree:0x4c8636,trunk:0x4a3626,disc:0xfffbe8,lamp:0},
+  dusk:{skyTop:0x1d2850,skyHor:0xf09460,fog:0xa77567,fogN:300,fogF:2100,hemiS:0xffc9a6,hemiG:0x2d2533,hemiI:.72,sun:0xff9a5c,sunI:1.0,sunDir:[.55,.1,-.8],walls:['#7a5a5e','#8c6a55','#5a5268','#9a7c68','#6a5a4c','#5d6a62'],glass:'#262433',lit:'#ffcf7a',litP:.36,em:.75,roof:0x4a4048,ground:0x2a272c,pave:0x57525a,grass:0x3d4a2e,tree:0x2a3424,trunk:0x2a2018,disc:0xffc07a,lamp:1},
   night:{skyTop:0x02040a,skyHor:0x1b2647,fog:0x0e1528,fogN:240,fogF:1800,hemiS:0x7080b4,hemiG:0x22222c,hemiI:1.05,sun:0xa8b9ff,sunI:.55,sunDir:[-.3,.55,-.6],walls:['#272c39','#2e2b34','#202531','#34312f','#25272f'],glass:'#0b0e16',lit:'#ffd38a',litP:.34,em:1,roof:0x1d1f26,ground:0x111317,pave:0x23252c,grass:0x1a2416,tree:0x141c12,trunk:0x1a140f,disc:0xe8eeff,lamp:1}
 };
 const SKIN=[0xf1c7a3,0xdba57e,0xb07a52,0x83522f,0x5c3820];

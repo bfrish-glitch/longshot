@@ -26,7 +26,7 @@ function gearHtml(i){ if(!M||M.range) return ''; const S=gearSel(); let tot=0;
   const short=tot>save.cash;
   const bank=Math.floor(save.cash), f=v=>'$'+v.toLocaleString();
   return `<div class="gearc"><div class="gh"><small>GEAR · THIS MISSION ONLY</small></div>
-   <div class="bank"><div><small>BANK</small><b>${f(bank)}</b></div><div><small>GEAR</small><b>${tot?'−'+f(tot):'$0'}</b></div><div><small>LEFT AFTER</small><b class="${short?'bad':''}">${short?'SHORT '+f(tot-bank):f(bank-tot)}</b></div></div>${rows}</div>`; }
+   <div class="bank"><div><small>BANK</small><b>${f(bank)}</b></div><div><small>GEAR</small><b>${tot?'−'+f(tot):'$0'}</b></div><div><small>REMAINING</small><b class="${short?'bad':''}">${short?'SHORT '+f(tot-bank):f(bank-tot)}</b></div></div>${rows}</div>`; }
 function gearStart(){ for(const k in GR) delete GR[k]; if(!M||M.range) return; const S=gearSel(), got=[];
   for(const k of Object.keys(GEAR)) if(S[k]){ if(save.cash>=GEAR[k].$){ save.cash-=GEAR[k].$; GR[k]=k==='strike'?1:true; got.push(GEAR[k].n); } }
   if(got.length) persist();
