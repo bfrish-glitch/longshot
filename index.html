@@ -183,6 +183,23 @@ h2::after{content:'';flex:1;height:1px;background:var(--line)}
 .intel b{color:var(--fg)}
 .intel .h{color:var(--red);font-weight:600}
 .acts{display:flex;flex-wrap:wrap;gap:10px}
+/* contracts: four acts of six, one compact row each, so a whole act fits on screen */
+.actbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 8px}
+.actbar button{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;padding:7px 4px;border:1px solid var(--line);border-radius:6px;background:var(--card);display:grid;gap:2px}
+.actbar button b{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--fg);font-weight:400}.actbar button small{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em}
+.actbar button.on{border-color:var(--amber);background:rgba(255,178,46,.1)}.actbar button.on b{color:var(--amber)}
+.actbar .ap{display:block;height:3px;border-radius:2px;background:var(--line);overflow:hidden;margin:2px 6px 0}.actbar .ap i{display:block;height:100%;background:var(--amber)}
+.clist{display:grid;gap:6px}
+.cr{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 12px;min-height:54px;background:var(--card);border:1px solid var(--line);border-radius:6px}
+.cr:hover{border-color:var(--amber-dim);background:var(--card2)}.cr:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.cr .cn{font-family:var(--mono);font-size:12px;color:var(--amber);letter-spacing:.06em}
+.cr .ct{display:grid;gap:2px;min-width:0}.cr .ct b{font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cr .ct small{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr.next{border-color:var(--amber);box-shadow:inset 3px 0 0 var(--amber)}
+.cr.locked{opacity:.38;cursor:not-allowed}
+.clist.vet .cr{border-color:#5a2a26}.clist.vet .cr .cn{color:#ff6b5b}.clist.vet .pip{border-color:#a8473d}.clist.vet .pip.on{background:var(--red);border-color:var(--red)}
+#modes{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#modes .cc.mode{padding:10px;gap:4px;grid-template-rows:auto auto auto}#modes .cc.mode .nm{font-size:17px}#modes .cc.mode .d{display:none}#modes .cc.mode .row{font-size:9.5px;letter-spacing:.08em}#modes .cc.mode .row:first-child span:last-child{display:none}
+
 #bStrike{width:64px;height:64px;padding:0;background:rgba(60,8,4,.7);border:2px solid #ff5442;color:#ffb3a8;font-family:var(--mono);font-size:11px;letter-spacing:.06em}
 .gearc{display:grid;gap:6px}.gearc .gh{display:flex;justify-content:space-between;gap:8px}.gearc .gh small{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--muted)}.gearc .gh small.bad{color:var(--red)}
 .bank{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.bank>div{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:6px 8px}.bank small{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--muted)}.bank b{font-family:var(--mono);font-weight:400;font-size:15px;white-space:nowrap}.bank b.bad{color:var(--red)}
@@ -301,7 +318,7 @@ h3.ok{color:var(--amber)} h3.bad{color:var(--red)}
       <nav class="tabs" id="mTabs" role="tablist"><button data-tab="play">PLAY</button><button data-tab="loadout">LOADOUT</button><button data-tab="ranks">RANKS</button><button data-tab="settings">SETTINGS</button></nav>
       <section data-tab="play" id="contSec"><button class="cont" id="bCont"><small id="contK">CONTINUE</small><b id="contN">Morning Watch</b><span id="contD"></span></button></section>
       <section id="modesSec" data-tab="play"><h2>Modes</h2><div class="grid" id="modes"></div></section>
-      <section data-tab="play"><h2>Contracts <span class="seg" id="vSeg"><button data-v="c" class="on">NORMAL</button><button data-v="v">VETERAN</button></span></h2><p class="tag" id="vNote" style="margin:-4px 0 10px" hidden>Veteran: no markers, stronger wind, a counter-sniper, one hit and you're done. Double cash. Unlocks per contract once you've beaten it.</p><div class="grid" id="grid"></div></section>
+      <section data-tab="play"><h2>Contracts <span class="seg" id="vSeg"><button data-v="c" class="on">NORMAL</button><button data-v="v">VETERAN</button></span></h2><p class="tag" id="vNote" style="margin:-4px 0 10px" hidden>Veteran: no markers, stronger wind, a counter-sniper, one hit and you're done. Double cash. Unlocks per contract once you've beaten it.</p><div class="actbar" id="actBar"></div><div class="clist" id="grid"></div></section>
       <section data-tab="loadout"><h2>Rifles</h2><div class="grid guns" id="rifles"></div></section>
       <section data-tab="loadout"><h2>Finishes</h2><div class="grid" id="finishes"></div></section>
       <section data-tab="loadout"><h2>Armory</h2><div class="arm" id="armory"></div></section>

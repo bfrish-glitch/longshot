@@ -192,7 +192,7 @@ $('#bBack').addEventListener('click',toMenu);
 $('#rRetry').addEventListener('click',()=>openBrief(mi,RUN.kind));
 $('#rNext').addEventListener('click',()=>openBrief(mi+1));
 $('#rMenu').addEventListener('click',toMenu);
-function toMenu(){ try{ achRender(); }catch(e){} rainSound(false); state='menu'; scoped=false; stats=null; bulletObj.visible=false; menuCity(); show('menu');}
+function toMenu(){ try{ achRender(); }catch(e){} menuAct=null; rainSound(false); state='menu'; scoped=false; stats=null; bulletObj.visible=false; menuCity(); show('menu');}
 const oS=$('#optSnd'),oI=$('#optInv'),oH=$('#optHold'),oQ=$('#optHq');
 oS.checked=save.opts.snd; oI.checked=save.opts.inv; oH.checked=save.opts.hold; oQ.checked=save.opts.hq;
 oS.addEventListener('change',()=>{save.opts.snd=oS.checked; persist(); if(oS.checked) unlockAudio(); else if(silentEl) silentEl.pause();});
@@ -226,7 +226,7 @@ function gunCards(){
   cards.push(`<div class="gc${G.supOwned&&G.sup?' eq':''}"><div class="nm">Suppressor</div><div class="d">Fits any rifle. Kills and misses alert hostiles in a much smaller radius, and there is no muzzle flash. Rounds fly about 4% slower.</div>${sb}</div>`);
   return cards.join('');
 }
-let menuView='c', menuTab='play';
+let menuView='c', menuTab='play', menuAct=null;
 try{ const t=localStorage.getItem('longshot-tab'); if(['play','loadout','ranks','settings'].includes(t)) menuTab=t; }catch(e){}
 function applyTab(){ document.querySelectorAll('#menu section[data-tab]').forEach(x=>x.hidden=x.dataset.tab!==menuTab);
   document.querySelectorAll('#mTabs button').forEach(b=>{ const on=b.dataset.tab===menuTab; b.classList.toggle('on',on); b.setAttribute('aria-selected',on); }); }
@@ -247,13 +247,14 @@ function buildMenu(){
    +`<button class="cc mode range" data-m="r"><div class="row"><span class="no" style="color:#86d39a">RANGE</span><span>100–1,000 M</span></div><div class="nm">Target Range</div><div class="d">Steel plates, wind flags, six drills. Learn the drop and DIAL.</div><div class="row"><span>${Object.keys(save.range||{}).length} DRILL BESTS</span><span></span></div></button>`;
   const vet=menuView==='v'; $('#grid').classList.toggle('vet',vet); $('#vNote').hidden=!vet;
   $('#vSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===menuView));
-  $('#grid').innerHTML=MISSIONS.map((m,i)=>{
-    const lock=vet?!(save.stars[i]>0):i+1>save.unlocked, st=(vet?save.vstars[i]:save.stars[i])||0;
-    return `<button class="cc${lock?' locked':''}" data-i="${i}" ${lock?'aria-disabled="true"':''}>
-      <div class="row"><span class="no">${vet?'VET ':''}C-${String(i+1).padStart(2,'0')}</span><span>${lock?(vet?'BEAT IT FIRST':'LOCKED'):(m.map||'city').toUpperCase()+' · '+{day:'DAY',dusk:'DUSK',night:'NIGHT'}[m.pal]}</span></div>
-      <div class="nm">${m.n}</div>
-      <div class="row"><span>${vet?(save.vbest[i]?'BEST '+save.vbest[i].toLocaleString():'×2 CASH'):`${m.hos+(m.hvt?1:0)} TGT · ${(save.ch[i]||[]).length}/${(m.ch||[]).length} CH`}</span><span class="pips">${[0,1,2].map(k=>`<span class="pip${k<st?' on':''}"></span>`).join('')}</span></div>
-    </button>`;}).join('');
+  const ACTN=Math.ceil(MISSIONS.length/6), nu=nextUp(); if(menuAct==null) menuAct=Math.min(ACTN-1,Math.floor((nu.k==='c'?nu.i:0)/6));
+  $('#actBar').innerHTML=Array.from({length:ACTN},(_,a)=>{ const i0=a*6, i1=Math.min(MISSIONS.length,i0+6); let got=0; for(let i=i0;i<i1;i++) got+=((vet?save.vstars[i]:save.stars[i])||0);
+    return `<button data-a="${a}" class="${a===menuAct?'on':''}"><b>ACT ${['I','II','III','IV','V','VI'][a]}</b><small>${String(i0+1).padStart(2,'0')}–${String(i1).padStart(2,'0')}</small><span class="ap"><i style="width:${Math.round(got/((i1-i0)*3)*100)}%"></i></span></button>`; }).join('');
+  $('#grid').innerHTML=MISSIONS.map((m,i)=>{ if(Math.floor(i/6)!==menuAct) return '';
+    const lock=vet?!(save.stars[i]>0):i+1>save.unlocked, st=(vet?save.vstars[i]:save.stars[i])||0, nx=!vet&&nu.k==='c'&&nu.i===i;
+    const where=(m.map||'city').toUpperCase()+' · '+{day:'DAY',dusk:'DUSK',night:'NIGHT'}[m.pal];
+    const sub=lock?(vet?'BEAT IT FIRST':'LOCKED'):vet?`${where} · ${save.vbest[i]?'BEST '+save.vbest[i].toLocaleString():'×2 CASH'}`:`${where} · ${m.hos+(m.hvt?1:0)} TGT · ${(save.ch[i]||[]).length}/${(m.ch||[]).length} CH`;
+    return `<button class="cr${lock?' locked':''}${nx?' next':''}" data-i="${i}" ${lock?'aria-disabled="true"':''}><span class="cn">${vet?'V':'C'}-${String(i+1).padStart(2,'0')}</span><span class="ct"><b>${m.n}</b><small>${sub}</small></span><span class="pips">${[0,1,2].map(k=>`<span class="pip${k<st?' on':''}"></span>`).join('')}</span></button>`;}).join('');
   $('#finishes').innerHTML=Object.entries(FIN).map(([k,f])=>{ const own=save.fin.owned.includes(k), eq=save.fin.eq===k;
     return `<div class="fin${eq?' eq':''}"><div class="sw" style="${finSwatch(k)}"></div><div class="nm">${f.n}</div>${eq?'<button class="buy" disabled>EQUIPPED</button>':own?`<button class="buy" data-f="${k}" data-a="eq">EQUIP</button>`:`<button class="buy" data-f="${k}" data-a="buy" ${save.cash<f.cost?'disabled':''}>$${f.cost.toLocaleString()}</button>`}</div>`;}).join('');
   $('#armory').innerHTML=Object.entries(UPG).map(([k,u])=>{
@@ -262,7 +263,8 @@ function buildMenu(){
       <div class="lvw"><div class="lv">${u.vals.map((_,j)=>`<i class="${j<=lv?'on':''}"></i>`).join('')}</div></div>
       <button class="buy" data-k="${k}" ${max||save.cash<cost?'disabled':''}>${max?'MAXED':'$'+cost.toLocaleString()}</button></div>`;}).join('');
 }
-$('#grid').addEventListener('click',e=>{const b=e.target.closest('.cc'); if(!b||b.classList.contains('locked')) return; unlockAudio(); openBrief(+b.dataset.i,menuView);});
+$('#actBar').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; menuAct=+b.dataset.a; buildMenu();});
+$('#grid').addEventListener('click',e=>{const b=e.target.closest('.cr'); if(!b||b.classList.contains('locked')) return; unlockAudio(); openBrief(+b.dataset.i,menuView);});
 $('#modes').addEventListener('click',e=>{const b=e.target.closest('.cc'); if(!b||b.classList.contains('locked')) return; unlockAudio(); openBrief(0,b.dataset.m);});
 $('#mTabs').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; menuTab=b.dataset.tab; try{localStorage.setItem('longshot-tab',menuTab);}catch(_){} applyTab(); $('#menu').scrollTop=0;});
 $('#bCont').addEventListener('click',()=>{ const b=$('#bCont'); unlockAudio(); openBrief(+b.dataset.i,b.dataset.k); });
