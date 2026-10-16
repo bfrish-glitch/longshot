@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0e0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Longshot">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>[hidden]{display:none!important}</style>
+<title>Longshot 3D</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* Layout: full-bleed 3D view with a 2D optic overlay, thumb controls pinned to bottom corners, menus are scrolling field dossiers over the live city */
+:root{
+  --bg:#0b0e0c; --panel:rgba(12,16,13,.9); --card:#131916; --card2:#18201b; --line:#2a342d;
+  --fg:#ebe6d8; --muted:#8f978d; --amber:#ffb22e; --amber-dim:#9c6c1a; --red:#ff5442; --green:#86d39a;
+  --display:'Saira Stencil One','Impact','Arial Narrow Bold',sans-serif;
+  --ui:'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;
+  --mono:'Share Tech Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html{position:fixed;inset:0;overflow:hidden;overscroll-behavior:none;height:100%;box-sizing:border-box;background:var(--bg)}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#app{position:relative;width:100%;height:100%;overflow:hidden;background:#000}
+#gl,#ov{position:absolute;inset:0;width:100%;height:100%;display:block}
+#gl{pointer-events:none}
+#ov{touch-action:none;cursor:crosshair}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+#hud{position:absolute;inset:0;pointer-events:none}
+.top{position:absolute;top:10px;left:16px;right:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font-family:var(--mono);font-size:13px;letter-spacing:.06em;background:rgba(4,6,5,.62);border:1px solid var(--line);padding:6px 10px;border-radius:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip b{color:var(--amber);font-weight:400}
+.chip.warn b{color:var(--red)}
+#bPause{pointer-events:auto;width:36px;height:32px;padding:0;background:rgba(4,6,5,.62);border:1px solid var(--line);border-radius:4px;font-family:var(--mono);font-size:14px}
+.spacer{flex:1}
+#alertBar{position:absolute;top:54px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:14px;letter-spacing:.12em;color:#fff;background:rgba(170,30,20,.85);padding:6px 12px;border-radius:3px;white-space:nowrap}
+#hint{position:absolute;left:50%;top:96px;transform:translateX(-50%);max-width:min(460px,70vw);text-align:center;font-weight:600;font-size:16px;letter-spacing:.03em;background:rgba(4,6,5,.74);border:1px solid var(--amber-dim);padding:8px 14px;border-radius:4px}
+.lc{position:absolute;left:16px;bottom:16px;display:flex;align-items:flex-end;gap:14px;pointer-events:none}
+.rc{position:absolute;right:16px;bottom:16px;display:flex;align-items:flex-end;gap:12px;pointer-events:none}
+.rc .col{display:flex;flex-direction:column;align-items:center;gap:12px}
+.ctl{pointer-events:auto;touch-action:none;border-radius:50%;display:grid;place-items:center;text-align:center;line-height:1}
+#fireWrap,#fireHap{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+#fireWrap{overflow:hidden;contain:paint;position:relative;display:inline-block;border-radius:50%}
+#fireHap{contain:paint;clip-path:circle(50%);pointer-events:auto;z-index:2;position:absolute;inset:0;border-radius:50%;overflow:hidden;opacity:.011;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#fireHap input{pointer-events:auto;position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:1}
+#bFire{width:92px;height:92px;background:radial-gradient(circle at 50% 38%,#ff7158,#b9271a 70%);border:3px solid rgba(255,255,255,.2);box-shadow:0 6px 18px rgba(0,0,0,.45);font-family:var(--display);font-size:21px;letter-spacing:.04em;color:#fff}
+#bFire.cool{filter:saturate(.35) brightness(.7)}
+#bFire:active{transform:scale(.96)}
+#bScope{width:64px;height:64px;background:rgba(4,6,5,.6);border:2px solid var(--amber);color:var(--amber);font-weight:700;font-size:14px;letter-spacing:.08em}
+#bScope.on{background:var(--amber);color:#1a1205}
+#bReload{width:58px;height:58px;background:rgba(4,6,5,.6);border:1px solid var(--line);font-family:var(--mono);font-size:12px;display:flex;flex-direction:column;justify-content:center;gap:3px}
+#bReload .big{font-size:17px}
+#bReload .sm{color:var(--muted);font-size:10px;letter-spacing:.12em}
+#bTherm,#bZstep,#bDial{width:56px;height:56px;padding:0;background:rgba(4,6,5,.6);border:1px solid var(--line);font-family:var(--mono);font-size:11px;letter-spacing:0}
+#bTherm{font-size:9px}
+#bTherm.on{border-color:#f2f2f2;background:#e8e8e8;color:#111}
+.lcol{display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none}
+@media (max-height:420px){#bTherm,#bZstep,#bDial{width:46px;height:46px;font-size:10px}}
+#bDial{font-size:10px;line-height:1.15}#bDial.on{border-color:var(--amber);color:var(--amber)}
+#bBreath{width:76px;height:76px;background:rgba(4,6,5,.6);border:2px solid var(--line);font-weight:700;font-size:13px;letter-spacing:.08em}
+#bBreath.on{border-color:var(--green);color:var(--green)}
+#zoomTrack{pointer-events:auto;touch-action:none;position:relative;width:46px;height:170px;border-radius:23px;background:rgba(4,6,5,.6);border:1px solid var(--line)}
+#zoomTrack::before{content:'';position:absolute;left:50%;top:22px;bottom:22px;width:2px;transform:translateX(-50%);background:var(--line)}
+#zoomKnob{position:absolute;left:5px;width:34px;height:34px;border-radius:50%;background:var(--amber);color:#1a1205;font-family:var(--mono);font-size:11px;display:grid;place-items:center}
+
+.ovl{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:linear-gradient(180deg,rgba(7,9,8,.55),rgba(7,9,8,.93) 50%)}
+.wrap{max-width:980px;margin:0 auto;padding-block:16px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:30px}
+.mhead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.eyebrow{font-family:var(--mono);color:var(--amber);font-size:12px;letter-spacing:.2em;text-transform:uppercase}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(40px,8vw,76px);line-height:.88;margin:6px 0 0;letter-spacing:.01em}
+h1 span{color:var(--amber)}
+h1 small{font-size:.42em;color:var(--muted);margin-left:.2em}
+.tag{font-size:17px;color:var(--muted);margin:10px 0 0;max-width:48ch}
+.funds{text-align:right;font-family:var(--mono)}
+.funds small{display:block;color:var(--muted);font-size:11px;letter-spacing:.2em}
+.funds b{font-size:30px;font-weight:400;font-variant-numeric:tabular-nums}
+.funds .sync{margin-top:4px;color:var(--muted)}
+.funds .sync.on{color:var(--green)}
+.brand{display:flex;align-items:center;gap:18px;min-width:0}
+.brand>div{min-width:0}
+.logo{width:clamp(56px,10vw,92px);height:auto;flex:none;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5))}
+.ldw{display:grid;justify-items:center;gap:14px}
+.ldw .logo{width:110px;animation:lgspin 6s linear infinite}
+@keyframes lgspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ldw .logo{animation:none}}
+.mhead>*{min-width:0}
+@media (max-width:520px){.mhead{flex-wrap:nowrap;align-items:center;gap:10px}.brand{gap:10px}.logo{width:46px}.brand h1{font-size:clamp(26px,8vw,40px);margin:0;white-space:nowrap}.brand h1 small{display:none}.funds{flex:none}.brand .eyebrow{display:none}.funds b{font-size:20px}.funds small{font-size:9px;letter-spacing:.14em}.funds .sync{display:none}.tabs button{font-size:11px;letter-spacing:.1em;padding:10px 2px}}
+.savebox{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.savebox input{font:inherit;font-family:var(--mono);font-size:12px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:8px;min-width:0;flex:1 1 220px}
+h2{font-weight:700;font-size:15px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;display:flex;align-items:center;gap:12px}
+h2::after{content:'';flex:1;height:1px;background:var(--line)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
+.cc{all:unset;box-sizing:border-box;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px;display:grid;gap:6px;min-width:0}
+.cc:hover{border-color:var(--amber-dim);background:var(--card2)}
+.cc:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.cc.locked{opacity:.38;cursor:not-allowed}
+.cc .row{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--muted)}
+.cc .row .no{color:var(--amber)}
+.cc .nm{font-weight:600;font-size:22px;line-height:1.05;color:var(--fg)}
+.pips{display:flex;gap:5px}
+.guns{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.gc{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px;display:grid;gap:8px;min-width:0}
+.gc.eq{border-color:var(--amber)}
+.gc .nm{font-weight:600;font-size:21px}
+.gc .d{color:var(--muted);font-size:15px;line-height:1.3}
+.gc .st{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--muted)}
+.gc .bar{height:5px;background:var(--line);border-radius:1px;overflow:hidden}
+.gc .bar i{display:block;height:100%;background:var(--amber)}
+.medal{font-family:var(--display);font-size:26px;letter-spacing:.06em;padding:4px 14px;border-radius:4px;color:#1a1205}
+.medal.m1{background:#c9874a}.medal.m2{background:#c9ced6}.medal.m3{background:#ffcf3a}
+.chl{display:grid;gap:6px}
+.chl:empty{display:none}
+.chl div{display:flex;gap:10px;align-items:baseline;font-size:16px;color:var(--muted)}
+.chl div span{font-family:var(--mono);color:var(--amber-dim);width:1em}
+.chl div.on{color:var(--fg)}
+.chl div.on span{color:var(--green)}
+.chl::before{content:'BONUS CHALLENGES · $150 FIRST TIME';font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--muted)}
+.pip{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--amber-dim)}
+.pip.on{background:var(--amber);border-color:var(--amber)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;letter-spacing:.14em}
+.seg button{all:unset;cursor:pointer;font-family:var(--mono);font-size:11px;padding:6px 12px;color:var(--muted)}
+.seg button.on{background:var(--amber);color:#14110a;font-weight:700}
+.grid.vet .cc{border-color:#5a2a26}.grid.vet .pip{border-color:#a8473d}.grid.vet .pip.on{background:var(--red);border-color:var(--red)}
+.cc.mode{grid-template-rows:auto auto 1fr auto}.cc.mode .d{color:var(--muted);font-size:14px;line-height:1.3}
+.cc.mode.daily{border-color:#1f5e6e}.cc.mode.range{border-color:#3d6b48}
+.handler{display:grid;gap:3px;margin:0 0 10px;padding:9px 12px;border-left:3px solid var(--amber);background:rgba(255,178,46,.07);border-radius:0 6px 6px 0}.handler b{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--amber);font-weight:400}.handler span{font-style:italic;color:var(--fg)}
+.photos{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 2px}.photos figure{margin:0;display:grid;gap:3px;justify-items:center}.photos canvas{width:84px;height:84px;border-radius:6px;border:1px solid var(--line);background:#111}.photos figcaption{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--muted)}
+.drills{display:grid;gap:6px;margin-top:10px}.drill{all:unset;cursor:pointer;display:grid;gap:2px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card)}.drill b{font-size:16px}.drill span{color:var(--muted);font-size:13px;line-height:1.3}.drill small{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--green)}.drill.on{border-color:var(--green);background:rgba(134,211,154,.08)}.cc.mode.endless{border-color:var(--amber-dim)}
+.fin{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px;display:grid;grid-template-columns:48px 1fr;gap:6px 10px;align-items:center;min-width:0}
+.fin.eq{border-color:var(--amber)}.fin .sw{width:48px;height:48px;border-radius:6px;grid-row:span 2;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.fin .nm{font-weight:600;font-size:17px}.fin .buy{justify-self:start}
+.lb{display:grid;gap:6px;max-width:640px}
+.lbr{display:grid;grid-template-columns:28px 28px 1fr auto;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 12px}
+.lbr.me{border-color:var(--amber)}
+.lbr .rk{font-family:var(--mono);color:var(--amber);text-align:center}
+.lbr .av{width:28px;height:28px;border-radius:50%;object-fit:cover}
+.lbr .who{font-weight:600;font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbr .val{font-family:var(--mono);font-size:15px;text-align:right;display:grid}.lbr .val small{color:var(--muted);font-size:10px;letter-spacing:.12em}
+.lbme{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--muted)}
+.lbme input{font:inherit;font-size:15px;letter-spacing:0;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:190px}
+.arm{display:grid;gap:8px}
+.ar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.ar .t{font-weight:600;font-size:20px}
+.ar .d{color:var(--muted);font-size:15px}
+.ar .v{font-family:var(--mono);font-size:13px;color:var(--amber)}
+.lv{display:flex;gap:4px}
+.lv i{width:16px;height:6px;background:var(--line);border-radius:1px}
+.lv i.on{background:var(--amber)}
+.buy{background:transparent;border:1px solid var(--amber);color:var(--amber);border-radius:4px;padding:8px 12px;font-family:var(--mono);font-size:13px;white-space:nowrap}
+.buy:disabled{border-color:var(--line);color:var(--muted);cursor:default}
+.manual{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;font-size:16px;line-height:1.4;color:#cfcabd}
+.manual h3{margin:0 0 4px;font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
+.manual p{margin:0;max-width:60ch}
+.opts{display:flex;flex-wrap:wrap;gap:18px;font-size:16px;color:var(--muted)}
+.tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px;margin:-14px 0 -12px;background:rgba(9,12,10,.94);border:1px solid var(--line);border-radius:8px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.tabs button{all:unset;cursor:pointer;text-align:center;font-family:var(--mono);font-size:12px;letter-spacing:.16em;padding:11px 4px;border-radius:5px;color:var(--muted)}
+.tabs button.on{background:var(--amber);color:#14110a;font-weight:700}
+.tabs button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.wrap section[data-tab][hidden]{display:none}
+.cont{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:grid;gap:4px;padding:16px 18px;border-radius:8px;background:linear-gradient(100deg,rgba(255,178,46,.18),rgba(255,178,46,.04));border:1px solid var(--amber)}
+.cont small{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--amber)}
+.cont b{font-weight:600;font-size:26px;line-height:1.05}
+.cont span{color:var(--muted);font-size:15px}
+.cont:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.opts label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.opts input{accent-color:var(--amber);width:18px;height:18px}
+.dossier{max-width:580px;width:100%;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.dossier .stripe{display:flex;justify-content:space-between;gap:10px;padding:10px 18px;background:repeating-linear-gradient(-45deg,#1a1408 0 10px,#211909 10px 20px);border-bottom:1px solid var(--amber-dim);font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--amber)}
+.dossier .body{padding:18px;display:grid;gap:16px}
+.dossier h3{font-family:var(--display);font-weight:400;font-size:clamp(34px,8vw,48px);line-height:.95;margin:0}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.fact{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px 10px}
+.fact small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--muted)}
+.fact b{font-family:var(--mono);font-weight:400;font-size:18px;font-variant-numeric:tabular-nums}
+.intel{font-size:17px;line-height:1.4;color:#d6d1c4;margin:0}
+.intel b{color:var(--fg)}
+.intel .h{color:var(--red);font-weight:600}
+.acts{display:flex;flex-wrap:wrap;gap:10px}
+/* contract dossier: targets, rifle, folding field notes, buttons pinned to the bottom */
+.intel{display:grid;gap:14px;font-size:16px}
+.intel p{margin:0}
+.intel .mode{line-height:1.4}
+.tgt{display:grid;gap:7px}
+.tgt>small,.rifle small{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--muted)}
+.rifle{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.rifle .rl{display:grid;gap:2px;min-width:0}
+.rifle .rl>b{font-size:17px}
+.rifle .rec{font-size:13px;color:var(--muted)}.rifle .rec b{color:#38e1ff}
+.rifle.wide{grid-template-columns:minmax(0,1fr)}.rifle.wide .rbtn{justify-self:start}
+.rifle p{grid-column:1/-1;font-size:13px;color:var(--muted);line-height:1.35}
+.rbtn{all:unset;box-sizing:border-box;cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:.06em;padding:9px 12px;border-radius:4px;background:var(--amber);color:#1a1205;white-space:nowrap;text-align:center}
+.rifle .ok{color:var(--green);font-family:var(--mono);font-size:12px;white-space:nowrap}
+.rifle .cost{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right}
+.notes{border-top:1px solid var(--line);padding-top:10px}
+.notes summary{list-style:none;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--amber);display:flex;justify-content:space-between}
+.notes summary::-webkit-details-marker{display:none}
+.notes summary::after{content:'SHOW';color:var(--muted)}.notes[open] summary::after{content:'HIDE'}
+.notes p{margin-top:8px;font-size:15px;line-height:1.4;color:#c4bfb2}
+#brief .dossier{overflow:clip}
+#brief .facts{grid-template-columns:minmax(0,.8fr) minmax(0,.95fr) minmax(0,.8fr) minmax(0,1.3fr);gap:6px}
+#brief .fact{padding:6px 8px}#brief .fact b{font-size:14px;white-space:nowrap;letter-spacing:-.02em}#brief .fact small{font-size:9px;letter-spacing:.12em}
+#brief .acts{position:sticky;bottom:0;z-index:2;margin:0 -18px -18px;padding:12px 18px calc(12px + env(safe-area-inset-bottom,0px));background:rgba(12,16,13,.97);border-top:1px solid var(--line)}
+#brief .acts .btn{flex:1 1 0}
+
+.btn{border-radius:4px;padding:12px 18px;font-weight:700;font-size:17px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line);background:var(--card)}
+.btn.pri{background:var(--amber);border-color:var(--amber);color:#1a1205}
+.btn:hover{filter:brightness(1.1)}
+.stars{display:flex;gap:10px}
+.stars .pip{width:26px;height:26px;border-width:2px}
+h3.ok{color:var(--amber)} h3.bad{color:var(--red)}
+.reason{font-family:var(--mono);font-size:14px;letter-spacing:.1em;color:var(--muted);margin:0}
+.center{min-height:100%;display:grid;place-items:center;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#loading{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);color:var(--amber);letter-spacing:.2em;background:var(--bg)}
+@media (max-width:520px){ .ar{grid-template-columns:minmax(0,1fr) auto} .ar .lvw{grid-column:1/-1;order:3} #bFire{width:82px;height:82px} #zoomTrack{height:140px} }
+@media (max-height:420px){ #zoomTrack{height:120px} #bScope{width:56px;height:56px} #hint{top:54px} }
+@media (prefers-reduced-motion:reduce){ #bFire:active{transform:none} }
+</style>
+</head><body>
+
+
+<div id="app">
+  <canvas id="gl"></canvas>
+  <canvas id="ov" aria-label="Sniper view of the city"></canvas>
+
+  <div id="hud" hidden>
+    <div class="top">
+      <button id="bPause" aria-label="Pause">II</button>
+      <span class="chip" id="cName">C-01</span>
+      <span class="chip">TARGETS <b id="cObj">0/0</b></span>
+      <span class="spacer"></span>
+      <span class="chip" id="cHpW" hidden>HP <b id="cHp">●●</b></span>
+      <span class="chip">SCORE <b id="cScore">0</b></span>
+      <span class="chip">WIND <b id="cWind">CALM</b></span>
+      <span class="chip" id="cTimeWrap">TIME <b id="cTime">2:00</b></span>
+    </div>
+    <div id="alertBar" hidden>HOSTILE FLEEING</div>
+    <div id="hint" hidden></div>
+    <div class="lc">
+      <div id="zoomTrack" hidden aria-label="Zoom"><div id="zoomKnob">8x</div></div>
+      <div class="lcol"><button class="ctl" id="bTherm" hidden>THERMAL</button><button class="ctl" id="bZstep" hidden>8x</button><button class="ctl" id="bDial" hidden>DIAL<br>300</button><button class="ctl" id="bBreath" hidden>HOLD<br>BREATH</button></div>
+    </div>
+    <div class="rc">
+      <button class="ctl" id="bReload" aria-label="Reload"><span class="big" id="cAmmo">5/5</span><span class="sm">RELOAD</span></button>
+      <div class="col">
+        <button class="ctl" id="bScope">SCOPE</button>
+        <div id="fireWrap"><button class="ctl" id="bFire" tabindex="-1">FIRE</button><label id="fireHap" aria-label="Fire"><input type="checkbox" switch tabindex="-1"></label></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ovl" id="menu" hidden>
+    <div class="wrap">
+      <header class="mhead">
+        <div class="brand">
+          <svg class="logo" viewBox="0 0 120 120" aria-hidden="true">
+  <defs><clipPath id="lgClip"><circle cx="60" cy="60" r="47"/></clipPath>
+  <linearGradient id="lgSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b2140"/><stop offset=".62" stop-color="#7a4a52"/><stop offset="1" stop-color="#f08a4b"/></linearGradient></defs>
+  <circle cx="60" cy="60" r="47" fill="url(#lgSky)"/>
+  <g clip-path="url(#lgClip)">
+    <circle cx="78" cy="74" r="13" fill="#ffc46a" opacity=".85"/>
+    <path d="M8 120V84h9v-9h7v-14h8v14h5v-30h11v30h4V64h9v11h6V52h4v-8h4v8h4v24h7V66h10v10h5V58h8v18h6v-8h7v52Z" fill="#0d0f14"/>
+    <g fill="#ffcf7a" opacity=".9"><rect x="41" y="52" width="2" height="2.5"/><rect x="45" y="58" width="2" height="2.5"/><rect x="41" y="64" width="2" height="2.5"/><rect x="66" y="56" width="2" height="2.5"/><rect x="66" y="64" width="2" height="2.5"/><rect x="96" y="66" width="2" height="2.5"/></g>
+  </g>
+  <circle cx="60" cy="60" r="47" fill="none" stroke="#0d0f14" stroke-width="7"/>
+  <circle cx="60" cy="60" r="51.5" fill="none" stroke="#ffb22e" stroke-width="3"/>
+  <g stroke="#0d0f14" stroke-width="5" stroke-linecap="butt"><path d="M60 6v24M60 90v24M6 60h24M90 60h24"/></g>
+  <g stroke="#0d0f14" stroke-width="1.6"><path d="M60 30v60M30 60h60"/></g>
+  <g fill="#ffb22e"><circle cx="48" cy="60" r="1.6"/><circle cx="36" cy="60" r="1.6"/><circle cx="72" cy="60" r="1.6"/><circle cx="84" cy="60" r="1.6"/><circle cx="60" cy="72" r="1.6"/><circle cx="60" cy="84" r="1.6"/><circle cx="60" cy="48" r="1.6"/></g>
+  <circle cx="60" cy="60" r="2.6" fill="#ff3b2f"/>
+</svg>
+          <div>
+          <div class="eyebrow">Rooftop contracts · no ads · no paywall</div>
+          <h1>LONG<span>SHOT</span><small>3D</small></h1>
+          </div>
+        </div>
+        <div class="funds"><small>FUNDS</small><b id="mCash">$0</b><small class="sync" id="mSync">SAVED ON THIS DEVICE</small></div>
+      </header>
+      <nav class="tabs" id="mTabs" role="tablist"><button data-tab="play">PLAY</button><button data-tab="loadout">LOADOUT</button><button data-tab="ranks">RANKS</button><button data-tab="settings">SETTINGS</button></nav>
+      <section data-tab="play" id="contSec"><button class="cont" id="bCont"><small id="contK">CONTINUE</small><b id="contN">Morning Watch</b><span id="contD"></span></button></section>
+      <section id="modesSec" data-tab="play"><h2>Modes</h2><div class="grid" id="modes"></div></section>
+      <section data-tab="play"><h2>Contracts <span class="seg" id="vSeg"><button data-v="c" class="on">NORMAL</button><button data-v="v">VETERAN</button></span></h2><p class="tag" id="vNote" style="margin:-4px 0 10px" hidden>Veteran: no markers, stronger wind, a counter-sniper, one hit and you're done. Double cash. Unlocks per contract once you've beaten it.</p><div class="grid" id="grid"></div></section>
+      <section data-tab="loadout"><h2>Rifles</h2><div class="grid guns" id="rifles"></div></section>
+      <section data-tab="loadout"><h2>Finishes</h2><div class="grid" id="finishes"></div></section>
+      <section data-tab="loadout"><h2>Armory</h2><div class="arm" id="armory"></div></section>
+      <section data-tab="settings"><h2>Options</h2><div class="opts">
+        <label><input type="checkbox" id="optSnd" checked> Sound</label>
+        <button class="buy" id="bTestSnd" type="button">TEST SOUND</button>
+        <label><input type="checkbox" id="optInv"> Invert drag</label>
+        <label><input type="checkbox" id="optHold" checked> Show hold readout</label>
+        <label><input type="checkbox" id="optMark" checked> Hostile markers</label>
+        <label>Marker color <select id="optMarkCol" style="font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:4px 6px"><option value="orange">Orange</option><option value="cyan">Cyan</option><option value="white">White</option><option value="red">Red</option></select></label>
+        <label><input type="checkbox" id="optHq"> Sharper graphics (slower)</label>
+        <label><input type="checkbox" id="optShadow"> Shadows</label>
+        <label><input type="checkbox" id="optFx"> Enhanced graphics (next mission)</label>
+        <label><input type="checkbox" id="optFireUp"> Fire on release</label>
+        <label><input type="checkbox" id="optHaptic" checked> Vibrate on shot</label>
+        
+        <label><input type="checkbox" id="optArcade"> Arcade ballistics (weaker gravity, no air drag)</label>
+        <label>Aim speed <input type="range" id="optSens" min="0.4" max="1.8" step="0.1" style="width:120px"></label>
+      </div></section>
+      <section data-tab="settings">
+        <h2>How to play</h2>
+        <div class="manual">
+          <div><h3>Find</h3><p>Tap SCOPE, then drag to look around. Slide the zoom bar for more magnification. Hostiles wear black with a red armband and carry rifles.</p></div>
+          <div><h3>Steady</h3><p>Your breathing moves the crosshair. Hold BREATH to lock it still for a few seconds. Run out and the sway gets worse for a moment.</p></div>
+          <div><h3>Drop and wind</h3><p>Real gravity and air drag: rounds slow down and drop faster the farther they go, and wind pushes them more the longer they fly. The rifle is zeroed at 300 m. HOLD 1.5 UP means put the crosshair 1.5 dots above the target. Past about 600 m, range the target and tap DIAL to set the scope for that distance, like a real sniper. Flags show the wind.</p></div>
+          <div><h3>Spot and distract</h3><p>Hold the crosshair on anyone for a second to spot them: hostiles get a marker, civilians get labeled. With markers off (or in Veteran) that's the only way to tag targets. White ! markers are distractions: shoot a car alarm or a bottle and nearby guards walk over to look, without raising the alarm.</p></div>
+          <div><h3>Stay quiet</h3><p>Kills and near misses spook nearby hostiles. A spooked hostile runs for cover, and if one gets away the contract fails.</p></div>
+          <div><h3>Credits</h3><p>Character models by Kenney (kenney.nl), released as public domain (CC0).</p></div>
+          <div><h3>Desktop</h3><p>Drag the mouse to look, wheel to zoom, Space to fire, Shift to hold breath, E or right-click for scope, R to reload.</p></div>
+        </div>
+      </section>
+      <section id="lbSec" data-tab="ranks"><h2>Leaderboard <span class="seg" id="lbSeg"><button data-t="daily" class="on">TODAY</button><button data-t="endless">ENDLESS</button><button data-t="vet">VETERAN</button></span></h2>
+        <div class="lb" id="lb"></div>
+        <div class="lbme"><label>Callsign <input id="lbCs" maxlength="16" placeholder="Your name on the board" autocomplete="off"></label><button class="buy" id="lbSave">SAVE</button></div>
+        <p class="reason" id="lbNote" style="margin-top:8px"></p>
+      </section>
+      <section data-tab="settings"><h2>Save</h2>
+        <p class="tag" style="margin:0 0 10px" id="saveInfo">Progress saves on this device. Copy a save code to back it up or move it to another phone.</p>
+        <div class="savebox"><button class="buy" id="bCopySave">COPY SAVE CODE</button><input id="inSave" placeholder="Paste a save code here" autocomplete="off"><button class="buy" id="bLoadSave">LOAD CODE</button></div>
+        <p class="reason" id="saveMsg" style="margin-top:8px"></p>
+      </section>
+    </div>
+  </div>
+
+  <div class="ovl" id="brief" hidden>
+    <div class="center">
+      <div class="dossier">
+        <div class="stripe"><span id="bNo">CONTRACT 01</span><span id="bPal">DAY</span></div>
+        <div class="body">
+          <h3 id="bName">Morning Watch</h3>
+          <div class="facts">
+            <div class="fact"><small id="bHosL">HOSTILES</small><b id="bHos">2</b></div>
+            <div class="fact"><small>WIND</small><b id="bWind">CALM</b></div>
+            <div class="fact"><small>TIME</small><b id="bTime">2:00</b></div>
+            <div class="fact"><small>RANGE</small><b id="bRange">—</b></div>
+          </div>
+          <div class="intel" id="bIntel"></div>
+          <div class="chl" id="bCh"></div>
+          <div class="acts"><button class="btn pri" id="bStart">Take position</button><button class="btn" id="bBack">Contracts</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ovl" id="result" hidden>
+    <div class="center">
+      <div class="dossier">
+        <div class="stripe"><span id="rNo">CONTRACT 01</span><span>DEBRIEF</span></div>
+        <div class="body">
+          <h3 id="rHead" class="ok">Contract complete</h3>
+          <p class="reason" id="rReason"></p>
+          <div class="stars" id="rStars"></div>
+          <div class="chl" id="rCh"></div>
+          <div class="facts">
+            <div class="fact"><small>TARGETS</small><b id="rT">0/0</b></div>
+            <div class="fact"><small>HEADSHOTS</small><b id="rH">0</b></div>
+            <div class="fact"><small>ACCURACY</small><b id="rA">0%</b></div>
+            <div class="fact"><small>EARNED</small><b id="rC">$0</b></div>
+          </div>
+          <div class="acts"><button class="btn pri" id="rNext">Next contract</button><button class="btn" id="rRetry">Retry</button><button class="btn" id="rMenu">Contracts</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ovl" id="pauseM" hidden>
+    <div class="center">
+      <div class="dossier">
+        <div class="stripe"><span>PAUSED</span><span id="pNo">C-01</span></div>
+        <div class="body">
+          <h3>Holding position</h3>
+          <div class="acts"><button class="btn pri" id="pResume">Resume</button><button class="btn" id="pRestart">Restart</button><button class="btn" id="pQuit">Abort contract</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="loading"><div class="ldw"><svg class="logo" viewBox="0 0 120 120" aria-hidden="true">
+  <defs><clipPath id="lgClip2"><circle cx="60" cy="60" r="47"/></clipPath>
+  <linearGradient id="lgSky2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b2140"/><stop offset=".62" stop-color="#7a4a52"/><stop offset="1" stop-color="#f08a4b"/></linearGradient></defs>
+  <circle cx="60" cy="60" r="47" fill="url(#lgSky2)"/>
+  <g clip-path="url(#lgClip2)">
+    <circle cx="78" cy="74" r="13" fill="#ffc46a" opacity=".85"/>
+    <path d="M8 120V84h9v-9h7v-14h8v14h5v-30h11v30h4V64h9v11h6V52h4v-8h4v8h4v24h7V66h10v10h5V58h8v18h6v-8h7v52Z" fill="#0d0f14"/>
+    <g fill="#ffcf7a" opacity=".9"><rect x="41" y="52" width="2" height="2.5"/><rect x="45" y="58" width="2" height="2.5"/><rect x="41" y="64" width="2" height="2.5"/><rect x="66" y="56" width="2" height="2.5"/><rect x="66" y="64" width="2" height="2.5"/><rect x="96" y="66" width="2" height="2.5"/></g>
+  </g>
+  <circle cx="60" cy="60" r="47" fill="none" stroke="#0d0f14" stroke-width="7"/>
+  <circle cx="60" cy="60" r="51.5" fill="none" stroke="#ffb22e" stroke-width="3"/>
+  <g stroke="#0d0f14" stroke-width="5" stroke-linecap="butt"><path d="M60 6v24M60 90v24M6 60h24M90 60h24"/></g>
+  <g stroke="#0d0f14" stroke-width="1.6"><path d="M60 30v60M30 60h60"/></g>
+  <g fill="#ffb22e"><circle cx="48" cy="60" r="1.6"/><circle cx="36" cy="60" r="1.6"/><circle cx="72" cy="60" r="1.6"/><circle cx="84" cy="60" r="1.6"/><circle cx="60" cy="72" r="1.6"/><circle cx="60" cy="84" r="1.6"/><circle cx="60" cy="48" r="1.6"/></g>
+  <circle cx="60" cy="60" r="2.6" fill="#ff3b2f"/>
+</svg><span>LOADING CITY…</span></div></div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/GLTFLoader.js"></script>
+<script src="vendor/SkeletonUtils.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/config.js"></script>
+<script src="js/render.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/people.js"></script>
+<script src="js/game.js"></script>
+<script src="js/range.js"></script>
+<script src="js/cq.js"></script>
+<script src="js/feat.js"></script>
+<script src="js/spot.js"></script>
+<script src="js/maps2.js"></script>
+<script src="js/story.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/social.js"></script>
+<script src="js/ui.js"></script>
+
+<script>
+/* offline: cache every file on first visit, then serve from the cache (works with no signal) */
+if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body></html>
